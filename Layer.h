@@ -4,10 +4,14 @@
 
 class HiddenConfig{
 public:
-	HiddenConfig():NeuronNum(512),WeightDecay(1e-6),DropoutRate(1.0){}
+	HiddenConfig(int nn, double wd , double dr){
+		NeuronNum = nn;
+		WeightDecay = wd;
+		DropoutRate = dr;
+	}
 
 	static HiddenConfig* instance(){
-		static HiddenConfig* tmp = new HiddenConfig();
+		static HiddenConfig* tmp = new HiddenConfig(0,0,0);
 		return tmp;
 	}
 	void set_NeuronNum(int i) {

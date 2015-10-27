@@ -751,7 +751,6 @@ void trainNetwork(vector<vector<int> > &trainX, vector<vector<int> > &trainY,
 					Config::instance()->get_batch_size(), 1);
 			init_acti(acti_0, trainX, sampleY, trainY, re_word.size());
 			getNetworkCost(acti_0, sampleY, HiddenConfigs, Hiddenlayers, SMR);
-
 			for (int x = 0; x < acti_0.size(); x++) {
 				delete acti_0[x];
 			}

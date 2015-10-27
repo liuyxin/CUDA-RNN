@@ -22,6 +22,10 @@ int main() {
 	map<string, int> labelmap;
 	map<string, int> wordmap;
 	vector<string> re_word;
+	vector<HiddenConfig> HiddenConfigs;
+	vector<HiddenLayer> Hiddenlayers;
+	SoftMax SMR;
+	Config::instance()->init("config.txt",HiddenConfigs,SMR);
 	readdata("dataset/news_tagged_data.txt", traindata, testdata, re_label,
 			labelmap);
 	cout << "traindata.size() :" << traindata.size() << endl
@@ -39,10 +43,7 @@ int main() {
 	vector<vector<int> > testY;
 	resolutioner(traindata, trainX, trainY, wordmap);
 	resolutioner(testdata, testX, testY, wordmap);
-	vector<HiddenConfig> HiddenConfigs;
-	vector<HiddenLayer> Hiddenlayers;
-	HiddenConfigs.push_back(*HiddenConfig::instance());
-	SoftMax SMR;
+
 	init_HLandSMR(HiddenConfigs, Hiddenlayers, SMR, re_word.size());
 
 	trainNetwork(trainX, trainY, HiddenConfigs,Hiddenlayers, SMR, testX, testY, re_word);

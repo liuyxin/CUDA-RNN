@@ -1,27 +1,27 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 #include <vector>
+#include <string>
 #include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
+#include <iostream>
 #include "Base.h"
 #include "cuMatrixVector.h"
 #include "Layer.h"
 #define NL_SIGMOID 0
 #define NL_TANH 1
 #define NL_RELU 2
+using namespace std;
 
 class Config {
 public:
 	vector<HiddenLayer*> Hiddens;
 	vector<SoftMax*> SMS;
 	Config() :
-			is_gradient_checking(false), use_log(false), non_linearity(NL_RELU), batch_size(
-					50), training_epochs(30), iter_per_epo(100), lrate_w(3e-3), lrate_b(
-					1e-3), ngram(5), training_percent(0.80), test_num(0), train_num(
-					0), randproductor(NULL), dev_inputX(NULL), dev_inputY(NULL), dev_testX(
-					NULL), dev_testY(NULL), sizex(0), sizey(0), sizetx(0), sizety(
-					0) {
+			test_num(0), train_num(0), randproductor(NULL), dev_inputX(NULL), dev_inputY(
+					NULL), dev_testX(NULL), dev_testY(NULL), sizex(0), sizey(0), sizetx(
+					0), sizety(0) {
 	}
 	static Config* instance() {
 		static Config* config = new Config();
@@ -183,18 +183,19 @@ public:
 	int* &get_dev_inputY() {
 		return dev_inputY;
 	}
-	int	get_sizetx() {
+	int get_sizetx() {
 		return sizetx;
 	}
-	int	get_sizety() {
+	int get_sizety() {
 		return sizety;
 	}
-	int	get_sizex() {
+	int get_sizex() {
 		return sizex;
 	}
-	int	get_sizey() {
+	int get_sizey() {
 		return sizey;
 	}
+	void init(string path, vector<HiddenConfig> &HiddenConfigs, SoftMax &SMR);
 private:
 	bool is_gradient_checking;
 	bool use_log;
@@ -217,6 +218,16 @@ private:
 	int sizey;
 	int sizetx;
 	int sizety;
+	string m_configStr;
+	string read_2_string(string File_name);
+	void deleteSpace();
+	void deleteComment();
+	bool get_word_bool(string &str, string name);
+	int get_word_int(string &str, string name);
+	float get_word_float(string &str, string name);
+	int get_word_type(string &str, string name);
+	void get_layers_config(string &str, vector<HiddenConfig> &HiddenConfigs,
+			SoftMax &SMR);
 };
 
 #endif
