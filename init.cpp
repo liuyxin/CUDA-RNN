@@ -42,20 +42,6 @@ void weightRandomInit(HiddenLayer &hidden, int inputsize, int hiddensize) {
 //    hidden.lr_W = Config::instance()->get_lrate_w();
 }
 
-//smr.W_l = Mat::ones(nclasses, nfeatures, CV_64FC1);
-//randu(smr.W_l, Scalar(-1.0), Scalar(1.0));
-//smr.W_l = smr.W_l * epsilon;
-//smr.W_lgrad = Mat::zeros(nclasses, nfeatures, CV_64FC1);
-//smr.W_ld2 = Mat::zeros(smr.W_l.size(), CV_64FC1);
-//
-//smr.W_r = Mat::ones(nclasses, nfeatures, CV_64FC1);
-//randu(smr.W_r, Scalar(-1.0), Scalar(1.0));
-//smr.W_r = smr.W_r * epsilon;
-//smr.W_rgrad = Mat::zeros(nclasses, nfeatures, CV_64FC1);
-//smr.W_rd2 = Mat::zeros(smr.W_r.size(), CV_64FC1);
-//
-//smr.cost = 0.0;
-//smr.lr_W = lrate_w;
 void weightRandomInit(SoftMax &SMR, int nclasses, int nfeatures) {
 	const double epsilon = 0.12;
 	Mat tmp_ran = Mat::ones(nclasses, nfeatures, CV_64FC1);
@@ -64,8 +50,8 @@ void weightRandomInit(SoftMax &SMR, int nclasses, int nfeatures) {
 	SMR.W_l = new cuMatrix<double>((double*) tmp_ran.data, nclasses, nfeatures,
 			1);
 	SMR.W_l->toGpu();
-	SMR.W_lgrad = new cuMatrix<double>(nclasses, nfeatures, CV_64FC1);
-	SMR.W_ld2 = new cuMatrix<double>(nclasses, nfeatures, CV_64FC1);
+	SMR.W_lgrad = new cuMatrix<double>(nclasses, nfeatures, 1);
+	SMR.W_ld2 = new cuMatrix<double>(nclasses, nfeatures, 1);
 
 	Mat tmp_ran1 = Mat::ones(nclasses, nfeatures, CV_64FC1);
 	randu(tmp_ran1, Scalar(-1.0), Scalar(1.0));
@@ -73,8 +59,8 @@ void weightRandomInit(SoftMax &SMR, int nclasses, int nfeatures) {
 	SMR.W_r = new cuMatrix<double>((double*) tmp_ran1.data, nclasses, nfeatures,
 			1);
 	SMR.W_r->toGpu();
-	SMR.W_rgrad = new cuMatrix<double>(nclasses, nfeatures, CV_64FC1);
-	SMR.W_rd2 = new cuMatrix<double>(nclasses, nfeatures, CV_64FC1);
+	SMR.W_rgrad = new cuMatrix<double>(nclasses, nfeatures, 1);
+	SMR.W_rd2 = new cuMatrix<double>(nclasses, nfeatures, 1);
 	SMR.cost = 0.0;
 	SMR.lr_W = Config::instance()->get_lrate_w();
 }
