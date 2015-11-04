@@ -1,5 +1,5 @@
 #include "readdata.h"
-#include <sstream>
+
 using namespace std;
 
 void readdata(string path, vector<vector<singleWord> >& traindata,
@@ -44,7 +44,7 @@ void readdata(string path, vector<vector<singleWord> >& traindata,
 			testdata.push_back(data[i]);
 	}
 	data.clear();
-	vector<vector<singleWord> >().swap(data);
+//	vector<vector<singleWord> >().swap(data);
 }
 
 bool

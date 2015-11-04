@@ -1,53 +1,48 @@
 #include "MemoryMonitor.h"
 
-void* MemoryMonitor::cpuMalloc(int size){
-	cpuMemory += size;
-	void* p = malloc(size);
-	cpuPoint[p] = 1.0f * size;
-// 	if(size >= 1024 * 1024){
-// 		printf("cpu malloc memory %fMb\n", 1.0 * size / 1024 / 1024);
-// 	}
-	return p;
+void MatData::Malloc__() {
+	assert(size);
+//	host = (float*) malloc(size);
+//	memset(host, 0, rows * cols * sizeof(float));
+	cudaError_t cudaStat = cudaMalloc((void**) &dev, size);
+	if (cudaStat != cudaSuccess) {
+		printf("MatData::cudaMalloc() failed\n");
+		exit(0);
+	}
+	cudaStat = cudaMemset(dev, 0, size);
+	if (cudaStat != cudaSuccess) {
+		printf("MatData::cudaMemset() failed\n");
+		exit(0);
+	}
+}
+void MatData::Malloc() {
+	assert(dev == NULL && host == NULL);
+	Malloc__();
 }
 
-cudaError_t MemoryMonitor::gpuMalloc(void** devPtr, int size){
-	gpuMemory += size;
-	cudaError_t cudaStat = cudaMalloc(devPtr, size);
-//	if (cudaStat != cudaSuccess) {
-//			printf("MemoryMonitor::gpuMalloc data upload failed\n");
-//			MemoryMonitor::instance()->freeGpuMemory(*devPtr);
-//			exit(0);
-//		}
-	gpuPoint[*devPtr] = (float)size;
-// 	if(size >= 1024 * 1024){
-// 		printf("gpu malloc memory %fMb\n", 1.0 * size / 1024 / 1024);
-// 	}
-	return cudaStat;
-}
-
-void MemoryMonitor::freeGpuMemory(void *ptr){
-	if(gpuPoint.find(ptr) != gpuPoint.end()){
-// 		if(gpuPoint[ptr] >= 1024 * 1024){
-// 			//printf("free gpu memory %fMb\n", gpuPoint[ptr] / 1024 / 1024);
-// 		}
-		gpuMemory -= gpuPoint[ptr];
-		cudaFree(ptr);
-//		checkCudaErrors(cudaFree(ptr));
-//		getLastCudaError("freeGpuMemory");
-		gpuPoint.erase(ptr);
+void MatData::CpuMalloc() {
+	if (host == NULL && size != 0) {
+		host = (float*) malloc(size);
+		memset(host, 0, rows * cols * sizeof(float));
 	}
 }
 
-
-void MemoryMonitor::freeCpuMemory(void *ptr)
-{
-	if(cpuPoint.find(ptr) != cpuPoint.end()){
-// 		if(cpuPoint[ptr] >= 1024 * 1024){
-// 			printf("free cpu memory %fMb\n", cpuPoint[ptr] / 1024 / 1024);
-// 		}
-		cpuMemory -= cpuPoint[ptr];
-		free(ptr);
-		cpuPoint.erase(ptr);
+void MatData::toCpu() {
+	CpuMalloc();
+	assert(host != NULL && dev != NULL);
+	cudaError_t cudaStat;
+	cudaStat = cudaMemcpy(host, dev, size, cudaMemcpyDeviceToHost);
+	if (cudaStat != cudaSuccess) {
+		printf("MatData::toCPU data download failed\n");
+		exit(0);
 	}
 }
 
+void MatData::setGpu(float* src) {
+	assert(dev != NULL);
+	cudaError_t cudaStat = cudaMemcpy(dev, src, size, cudaMemcpyHostToDevice);
+	if (cudaStat != cudaSuccess) {
+		printf("MatData::setGpu failed\n");
+		exit(0);
+	}
+}

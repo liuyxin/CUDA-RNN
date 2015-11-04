@@ -47,7 +47,6 @@ void Config::deleteSpace() {
 		}
 		m_configStr.erase(pos1, pos2 - pos1);
 	}
-
 }
 
 void Config::deleteComment() {
@@ -63,6 +62,7 @@ void Config::deleteComment() {
 		m_configStr.erase(pos1, pos2 - pos1 + 1);
 	}
 }
+
 bool Config::get_word_bool(string &str, string name) {
 	size_t pos = str.find(name + "=");
 	int i = pos + 1;
@@ -160,7 +160,7 @@ int Config::get_word_type(string &str, string name) {
 	return res;
 }
 
-void Config::get_layers_config(string &str, vector<HiddenConfig> &HiddenConfigs,
+void Config::get_layers_config(string &str,
 		SoftMax &SMR) {
 	std::vector<string> layers;
 	if (str.empty())
@@ -210,12 +210,12 @@ void Config::get_layers_config(string &str, vector<HiddenConfig> &HiddenConfigs,
 	}
 }
 
-void Config::init(string path, vector<HiddenConfig> &HiddenConfigs,
+void Config::init(string path,
 		SoftMax &SMR) {
 	m_configStr = read_2_string(path);
 	deleteComment();
 	deleteSpace();
-	get_layers_config(m_configStr, HiddenConfigs, SMR);
+	get_layers_config(m_configStr,SMR);
 	is_gradient_checking = get_word_bool(m_configStr, "IS_GRADIENT_CHECKING");
 
 	if (is_gradient_checking) {

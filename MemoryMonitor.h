@@ -1,33 +1,53 @@
-#ifndef __MEMORY_MONITOR_H__
-#define __MEMORY_MONITOR_H__
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "helper_cuda.h"
+#ifndef MEMORYMONITOR_H
+#define MEMORYMONITOR_H
+#include <cublas_v2.h>
 #include <cuda_runtime.h>
-#include <map>
-class MemoryMonitor
-{
+#include "helper_cuda.h"
+#include <assert.h>
+#include <stdio.h>
+#include <algorithm>
+//#include "Config.h"
+using namespace std;
+class MatData {
 public:
-	static MemoryMonitor* instance(){
-		static MemoryMonitor* monitor = new MemoryMonitor();
-		return monitor;
+	MatData(int r = 0, int c = 0) {
+		rows = r;
+		cols = c;
+		size = rows * cols * sizeof(float);
+		host = NULL;
+		if (size == 0) {
+			dev = NULL;
+		} else {
+			Malloc__();
+		}
 	}
-	void* cpuMalloc(int size);
-	cudaError_t gpuMalloc(void** devPtr, int size);
-	MemoryMonitor(): gpuMemory(0), cpuMemory(0){}
-//	~MemoryMonitor(){
-//		delete MemoryMonitor::instance();
-//	}
-	void printCpuMemory(){printf("total malloc cpu memory %fMb\n", cpuMemory / 1024 / 1024);}
-	void printGpuMemory(){printf("total malloc gpu memory %fMb\n", gpuMemory / 1024 / 1024);}
-	void freeGpuMemory(void* ptr);
-	void freeCpuMemory(void* ptr);
+	~MatData() {
+		if (host != NULL)
+			free(host);
+		if (dev != NULL)
+			cudaFree(dev);
+	}
+	void Malloc();
+	void toCpu();
+	void setGpu(float* src);
+	float* getDev() {
+		assert(dev != NULL);
+		return dev;
+	}
+	float* getHost() {
+		if (host == NULL) {
+			toCpu();
+		}
+		return host;
+	}
 private:
-	float cpuMemory;
-	float gpuMemory;
-	std::map<void*, float>cpuPoint;
-	std::map<void*, float>gpuPoint;
+	int rows;
+	int cols;
+	int size;
+	float* host;
+	float* dev;
+	void Malloc__();
+	void CpuMalloc();
 };
 
 #endif

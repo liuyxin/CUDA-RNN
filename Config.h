@@ -1,12 +1,12 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef CONFIG_H__
+#define CONFIG_H__
 #include <vector>
 #include <string>
 #include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
-#include "Base.h"
+#include "cuMatrix.h"
 #include "cuMatrixVector.h"
 #include "Layer.h"
 #define NL_SIGMOID 0
@@ -16,12 +16,9 @@ using namespace std;
 
 class Config {
 public:
-	vector<HiddenLayer*> Hiddens;
-	vector<SoftMax*> SMS;
+	vector<HiddenConfig> HiddenConfigs;
 	Config() :
-			test_num(0), train_num(0), randproductor(NULL), dev_inputX(NULL), dev_inputY(
-					NULL), dev_testX(NULL), dev_testY(NULL), sizex(0), sizey(0), sizetx(
-					0), sizety(0) {
+			test_num(0), train_num(0),word_num(0),trainX_num(0),testX_num(0) {
 	}
 	static Config* instance() {
 		static Config* config = new Config();
@@ -98,104 +95,25 @@ public:
 	int get_train_num() {
 		return train_num;
 	}
-	void randproductor_init() {
-		if (train_num == 0) {
-			printf(
-					"void randproductor_init() error: train_num = 0, run Config::set_traintest_num(int sample_num) first\n");
-			exit(0);
-		} else {
-			if (randproductor == NULL) {
-				randproductor = (int *) malloc(train_num * sizeof(int));
-				for (int i = 0; i < train_num; i++)
-					randproductor[i] = i;
-			}
-		}
+	void set_trainX_num(int i){
+		trainX_num = i;
 	}
-
-	int* &get_rand(bool x = 1) {
-		if (randproductor == NULL) {
-			printf(
-					"int* get_rand() error: randproductor = NULL, run Config::randproductor_init() first\n");
-			exit(0);
-		} else if (x) {
-			random_shuffle(randproductor, randproductor + train_num);
-			return randproductor;
-		} else {
-			return randproductor;
-		}
+	int trainXNum(){
+		return trainX_num;
 	}
-
-	void testX2gpu(int *host_, int size) {
-		MemoryMonitor::instance()->gpuMalloc((void**) &dev_testX, size);
-		cudaError_t cudaStat;
-		sizetx = size;
-		cudaStat = cudaMemcpy(dev_testX, host_, size, cudaMemcpyHostToDevice);
-		if (cudaStat != cudaSuccess) {
-			printf("set_gpudata::toGPU data upload failed\n");
-			MemoryMonitor::instance()->freeGpuMemory(dev_testX);
-			exit(0);
-		}
+	void set_testX_num(int i){
+		testX_num = i;
 	}
-	void testY2gpu(int *host_, int size) {
-		MemoryMonitor::instance()->gpuMalloc((void**) &dev_testY, size);
-		cudaError_t cudaStat;
-		sizety = size;
-		cudaStat = cudaMemcpy(dev_testY, host_, size, cudaMemcpyHostToDevice);
-		if (cudaStat != cudaSuccess) {
-			printf("set_gpudata::toGPU data upload failed\n");
-			MemoryMonitor::instance()->freeGpuMemory(dev_testY);
-			exit(0);
-		}
+	int testXNum(){
+		return testX_num;
 	}
-
-	int* &get_dev_testX() {
-		return dev_testX;
+	void set_word_num(int i){
+		word_num = i;
 	}
-	int* &get_dev_testY() {
-		return dev_testY;
+	int wordNum(){
+		return word_num;
 	}
-	void inputx2gpu(int *host_, int size) {
-		MemoryMonitor::instance()->gpuMalloc((void**) &dev_inputX, size);
-		cudaError_t cudaStat;
-		sizex = size;
-		cudaStat = cudaMemcpy(dev_inputX, host_, size, cudaMemcpyHostToDevice);
-		if (cudaStat != cudaSuccess) {
-			printf("set_gpudata::toGPU data upload failed\n");
-			MemoryMonitor::instance()->freeGpuMemory(dev_inputX);
-			exit(0);
-		}
-	}
-	void inputy2gpu(int *host_, int size) {
-		MemoryMonitor::instance()->gpuMalloc((void**) &dev_inputY, size);
-		cudaError_t cudaStat;
-		sizey = size;
-		cudaStat = cudaMemcpy(dev_inputY, host_, size, cudaMemcpyHostToDevice);
-		if (cudaStat != cudaSuccess) {
-			printf("set_gpudata::toGPU data upload failed\n");
-			MemoryMonitor::instance()->freeGpuMemory(dev_inputY);
-			exit(0);
-		}
-	}
-
-	int* &get_dev_inputX() {
-		return dev_inputX;
-	}
-	int* &get_dev_inputY() {
-		return dev_inputY;
-	}
-	int get_sizetx() {
-		return sizetx;
-	}
-	int get_sizety() {
-		return sizety;
-	}
-	int get_sizex() {
-		return sizex;
-	}
-	int get_sizey() {
-		return sizey;
-	}
-	void init(string path, vector<HiddenConfig> &HiddenConfigs, SoftMax &SMR);
+	void init(string path, SoftMax &SMR);
 private:
 	bool is_gradient_checking;
 	bool use_log;
@@ -209,15 +127,9 @@ private:
 	float training_percent;
 	int train_num;
 	int test_num;
-	int *randproductor;
-	int *dev_inputX;
-	int *dev_inputY;
-	int *dev_testX;
-	int *dev_testY;
-	int sizex;
-	int sizey;
-	int sizetx;
-	int sizety;
+	int word_num;
+	int trainX_num;
+	int testX_num;
 	string m_configStr;
 	string read_2_string(string File_name);
 	void deleteSpace();
@@ -226,8 +138,7 @@ private:
 	int get_word_int(string &str, string name);
 	float get_word_float(string &str, string name);
 	int get_word_type(string &str, string name);
-	void get_layers_config(string &str, vector<HiddenConfig> &HiddenConfigs,
-			SoftMax &SMR);
+	void get_layers_config(string &str, SoftMax &SMR);
 };
 
 #endif

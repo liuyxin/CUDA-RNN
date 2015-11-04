@@ -1,20 +1,45 @@
+#include <iostream>
 #include "cuMatrixVector.h"
-#include "Base.h"
+#include "cuMatrix.h"
 #include "readdata.h"
 #include "Layer.h"
-#include "cuMatrixVector.h"
 #include "Config.h"
-#include "init.h"
-#include "train_network.h"
 #include <vector>
 #include <map>
 #include <string>
 #include <iostream>
 #include "hardware.h"
+#include "Config.h"
+#include "LayerInit.h"
+#include "InputInit.h"
+#include "TrainNetwork.h"
 using namespace std;
+void PrintLayerConfigs(SoftMax& SMR) {
+	cout
+			<< "************************** HiddenLayer parameter **************************"
+			<< endl;
+	for (int i = 0; i < Config::instance()->HiddenConfigs.size(); i++) {
+		printf("Hidden %d :\n", i);
+		cout << "NeuronNum = "
+				<< Config::instance()->HiddenConfigs[i].get_NeuronNum() << endl;
+		cout << "WeightDecay = "
+				<< Config::instance()->HiddenConfigs[i].get_WeightDecay()
+				<< endl;
+		cout << "DropoutRate = "
+				<< Config::instance()->HiddenConfigs[i].get_DropoutRate()
+				<< endl;
+	}
+	printf("\n");
+	cout
+			<< "*************************** SOFTMAX parameter ***************************"
+			<< endl;
+	cout << "class num = " << SMR.get_NumClasses() << endl;
+	cout << "WeightDecay= " << SMR.get_WeightDecay() << endl;
+}
 
+//cout << "wordmap.size()     :" << wordmap.size() << endl
+//		<< "re_wordmap.size()  :" << re_word.size() << endl;
 int main() {
-
 	getDevicesinfo();
 	vector<vector<singleWord> > traindata;
 	vector<vector<singleWord> > testdata;
@@ -22,31 +47,28 @@ int main() {
 	map<string, int> labelmap;
 	map<string, int> wordmap;
 	vector<string> re_word;
-	vector<HiddenConfig> HiddenConfigs;
 	vector<HiddenLayer> Hiddenlayers;
 	SoftMax SMR;
-	Config::instance()->init("config.txt",HiddenConfigs,SMR);
+	Config::instance()->init("config.txt", SMR);
 	readdata("dataset/news_tagged_data.txt", traindata, testdata, re_label,
 			labelmap);
-	cout << "traindata.size() :" << traindata.size() << endl
-			<< "testdata.size()  :" << testdata.size() << endl
-			<< "re_label.size()  :" << re_label.size() << endl
-			<< "labelmap.size()  :" << labelmap.size() << endl;
-//  softmaxConfig.NumClasses = re_label.size();
 	removeNumber(traindata);
 	getWordMap(traindata, wordmap, re_word);
-	cout << "wordmap.size()     :" << wordmap.size() << endl
-			<< "re_wordmap.size()  :" << re_word.size() << endl;
 	vector<vector<int> > trainX;
 	vector<vector<int> > trainY;
 	vector<vector<int> > testX;
 	vector<vector<int> > testY;
 	resolutioner(traindata, trainX, trainY, wordmap);
 	resolutioner(testdata, testX, testY, wordmap);
-
-	init_HLandSMR(HiddenConfigs, Hiddenlayers, SMR, re_word.size());
-
-	trainNetwork(trainX, trainY, HiddenConfigs,Hiddenlayers, SMR, testX, testY, re_word);
-
+	Config::instance()->set_word_num(re_word.size());
+	Config::instance()->set_trainX_num(trainX.size());
+	Config::instance()->set_testX_num(testX.size());
+	cout<< Config::instance()->wordNum()<<endl
+		<<Config::instance()->trainXNum()<<endl
+		<<Config::instance()->testXNum()<<endl;
+	init_HLandSMR(Config::instance()->HiddenConfigs, Hiddenlayers, SMR,
+			re_word.size());
+	Data2GPU(trainX, trainY, testX, testY);
+	trainNetwork(Hiddenlayers,SMR,re_word.size());
 	return 0;
 }

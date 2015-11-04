@@ -1,90 +1,75 @@
-#ifndef __CU_MATRIX_VECTOR_H_
-#define __CU_MATRIX_VECTOR_H_
-
+#ifndef CUMATRIXVECTOR_H
+#define CUMATRIXVECTOR_H
 #include <vector>
-#include "Base.h"
-#include "cuda_runtime.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <algorithm>
-#include "MemoryMonitor.h"
+#include "cuMatrix.h"
+#include <assert.h>
 using namespace std;
 
-template<class T>
 class cuMatrixVector {
 public:
-	cuMatrixVector() :
-			m_hstPoint(0), m_devPoint(0) {
+	cuMatrixVector() {
+		m_host = NULL;
+		m_dev = NULL;
 	}
 	~cuMatrixVector() {
-		MemoryMonitor::instance()->freeCpuMemory(m_hstPoint);
-		MemoryMonitor::instance()->freeGpuMemory(m_devPoint);
+		if (m_host != NULL)
+			free(m_host);
+		if (m_dev != NULL)
+			cudaFree(m_dev);
+		for(int i = 0 ; i < m_vec.size() ; i++){
+			delete m_vec[i];
+		}
 		m_vec.clear();
 	}
-	cuMatrix<T>*& operator[](size_t index) {
+	cuMatrix*& operator[](size_t index) {
 		if (index >= m_vec.size()) {
-			//Assert(true);
-			printf("cuMatrix Vector operator[] error\n");
+			printf("cuMatrixVector operator[] error\n");
 			exit(0);
 		}
 		return m_vec[index];
+	}
+	void toGpu() {
+		cudaError_t cudaStat;
+		m_host = (float**) malloc(m_vec.size() * sizeof(float*));
+		if (!m_host) {
+			printf("cuMatrixVector malloc m_host fail\n");
+			exit(0);
+		}
+		cudaStat = cudaMalloc((void**) &m_dev, m_vec.size() * sizeof(float*));
+		if (cudaStat != cudaSuccess) {
+			printf("cuMatrixVector cudaMalloc m_dev fail\n");
+			exit(0);
+		}
+		for (int p = 0; p < (int) m_vec.size(); p++) {
+			m_host[p] = m_vec[p]->getDev();
+		}
+		cudaStat = cudaMemcpy(m_dev, m_host, sizeof(float*) * m_vec.size(),
+				cudaMemcpyHostToDevice);
+		if (cudaStat != cudaSuccess) {
+			printf("cuMatrixVector::toGpu cudaMemcpy fail\n");
+			exit(0);
+		}
+	}
+
+	void push_back(cuMatrix* p) {
+		m_vec.push_back(p);
 	}
 	size_t size() {
 		return m_vec.size();
 	}
 
-	void push_back(cuMatrix<T>* m) {
-		m_vec.push_back(m);
+	float** &get_host() {
+		assert(m_host != NULL);
+		return m_host;
 	}
-
-	void toGpu() {
-		cudaError_t cudaStat;
-
-		m_hstPoint = (T**) MemoryMonitor::instance()->cpuMalloc(
-				m_vec.size() * sizeof(T*));
-		if (!m_hstPoint) {
-			printf("cuMatrixVector<T> malloc m_hstPoint fail\n");
-			exit(0);
-		}
-
-		cudaStat = MemoryMonitor::instance()->gpuMalloc((void**) &m_devPoint,
-				sizeof(T*) * m_vec.size());
-		if (cudaStat != cudaSuccess) {
-			printf("cuMatrixVector<T> cudaMalloc m_devPoint fail\n");
-			exit(0);
-		}
-
-		for (int p = 0; p < (int) m_vec.size(); p++) {
-			m_hstPoint[p] = m_vec[p]->getDev();
-		}
-
-		cudaStat = cudaMemcpy(m_devPoint, m_hstPoint, sizeof(T*) * m_vec.size(),
-				cudaMemcpyHostToDevice);
-		if (cudaStat != cudaSuccess) {
-			printf("cuMatrixVector::toGpu cudaMemcpy w fail\n");
-			exit(0);
-		}
-	}
-	void reverse_(){
-		reverse(m_vec.begin(),m_vec.end());
-		toGpu();
-	}
-	T** &get_hstPoint() {
-		return m_hstPoint;
-	}
-	T** &get_devPoint() {
-		return m_devPoint;
-	}
-	void clear() {
-		MemoryMonitor::instance()->freeCpuMemory(m_hstPoint);
-		MemoryMonitor::instance()->freeGpuMemory(m_devPoint);
-		m_vec.clear();
+	float** &get_devPoint() {
+		assert(m_dev != NULL);
+		return m_dev;
 	}
 private:
-	vector<cuMatrix<T>*> m_vec;
-	T** m_hstPoint;
-	T** m_devPoint;
+	vector<cuMatrix*> m_vec;
+	float** m_host; //point 2 cuMatrix->Data->getDev()
+	float** m_dev;
 };
-
 #endif

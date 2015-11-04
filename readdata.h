@@ -1,10 +1,10 @@
 #ifndef READDATA_H
 #define READDATA_H
-
 #include <string>
 #include <map>
 #include <vector>
 #include <fstream>
+#include <sstream>
 #include "Config.h"
 using namespace std;
 struct singleWord{
@@ -24,4 +24,4 @@ resolutioner(const std::vector<std::vector<singleWord> > &data,
 		std::vector<std::vector<int> > &resol,
 		std::vector<std::vector<int> > &labels,
 		std::map<string, int> &wordmap);
-#endif /* READCONFIGANDDATA_H_ */
+#endif
