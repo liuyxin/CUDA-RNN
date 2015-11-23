@@ -17,9 +17,9 @@ public:
 			free(m_host);
 		if (m_dev != NULL)
 			cudaFree(m_dev);
-		for(int i = 0 ; i < m_vec.size() ; i++){
-			delete m_vec[i];
-		}
+//		for(int i = 0 ; i < m_vec.size() ; i++){
+//			delete m_vec[i];
+//		}
 		m_vec.clear();
 	}
 	cuMatrix*& operator[](size_t index) {
@@ -44,8 +44,8 @@ public:
 		for (int p = 0; p < (int) m_vec.size(); p++) {
 			m_host[p] = m_vec[p]->getDev();
 		}
-		cudaStat = cudaMemcpy(m_dev, m_host, sizeof(float*) * m_vec.size(),
-				cudaMemcpyHostToDevice);
+		cudaStat = cudaMemcpyAsync(m_dev, m_host, sizeof(float*) * m_vec.size(),
+				cudaMemcpyHostToDevice,0);
 		if (cudaStat != cudaSuccess) {
 			printf("cuMatrixVector::toGpu cudaMemcpy fail\n");
 			exit(0);

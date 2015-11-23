@@ -11,9 +11,9 @@ using namespace std;
 class MatData {
 public:
 	MatData(int r = 0, int c = 0) {
-		rows = r;
-		cols = c;
-		size = rows * cols * sizeof(float);
+//		rows = r;
+//		cols = c;
+		size = r * c * sizeof(float);
 		host = NULL;
 		if (size == 0) {
 			dev = NULL;
@@ -40,9 +40,10 @@ public:
 		}
 		return host;
 	}
+	int sizes(){
+		return size;
+	}
 private:
-	int rows;
-	int cols;
 	int size;
 	float* host;
 	float* dev;

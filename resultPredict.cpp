@@ -3,7 +3,7 @@
 void testNetwork(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR, bool flag) {
 	int size =
 			flag ? Config::instance()->trainXNum() : Config::instance()->testXNum();
-	int wn = Config::instance()->wordNum();
+	int wn = Config::instance()->get_wordNum();
 	int* res = new int[size];
 	int* truth = new int[size];
 	int offset;
@@ -58,32 +58,57 @@ void predict(cuMatrixVector &sampleX, vector<HiddenLayer> &Hiddenlayers,
 							acti_r[i - 1][0].cols()));
 		}
 		for (int j = 0; j < T; ++j) {
-			cuMatrix tmpacti = Hiddenlayers[i - 1].U_l * acti_l[i - 1][j];
-			if (j > 0)
-				tmpacti = tmpacti + Hiddenlayers[i - 1].W_l * acti_l[i][j - 1];
-			if (i > 1)
-				tmpacti = tmpacti + Hiddenlayers[i - 1].U_l * acti_r[i - 1][j];
-			tmpacti = ReLU(tmpacti);
-			if (Config::instance()->HiddenConfigs[i - 1].get_DropoutRate() < 1.0) {
-				tmpacti = tmpacti.Mul(Config::instance()->HiddenConfigs[i - 1].get_DropoutRate());
+//			cuMatrix tmpacti = Hiddenlayers[i - 1].U_l * acti_l[i - 1][j];
+//			if (j > 0)
+//				tmpacti = tmpacti + Hiddenlayers[i - 1].W_l * acti_l[i][j - 1];
+//			if (i > 1)
+//				tmpacti = tmpacti + Hiddenlayers[i - 1].U_l * acti_r[i - 1][j];
+//			tmpacti = ReLU(tmpacti);
+//			if (Config::instance()->HiddenConfigs[i - 1].get_DropoutRate() < 1.0) {
+//				tmpacti = tmpacti.Mul(Config::instance()->HiddenConfigs[i - 1].get_DropoutRate());
+//			}
+//			tmpacti.copyTo(acti_l[i][j]);
+			cuMultiplication(Hiddenlayers[i - 1].U_l, acti_l[i - 1][j],
+					acti_l[i][j]);
+
+			if (j > 0) {
+				acti_l[i][j] += Hiddenlayers[i - 1].W_l
+						* acti_l[i][j - 1];
 			}
-			tmpacti.copyTo(acti_l[i][j]);
+			if (i > 1) {
+				acti_l[i][j] += Hiddenlayers[i - 1].U_l
+						* acti_r[i - 1][j];
+			}
+			acti_l[i][j].ReLU2(acti_l[i][j]);
 		}
 		//time backward
 		for (int j = T - 1; j >= 0; --j) {
-			cuMatrix tmpacti = Hiddenlayers[i - 1].U_r * acti_r[i - 1][j];
-			if (j < T - 1)
-				tmpacti = tmpacti + Hiddenlayers[i - 1].W_r * acti_r[i][j + 1];
-			if (i > 1)
-				tmpacti = tmpacti + Hiddenlayers[i - 1].U_r * acti_l[i - 1][j];
-			tmpacti = ReLU(tmpacti);
-			if (Config::instance()->HiddenConfigs[i - 1].get_DropoutRate() < 1.0) {
-				tmpacti = tmpacti.Mul(Config::instance()->HiddenConfigs[i - 1].get_DropoutRate());
+//			cuMatrix tmpacti = Hiddenlayers[i - 1].U_r * acti_r[i - 1][j];
+//			if (j < T - 1)
+//				tmpacti = tmpacti + Hiddenlayers[i - 1].W_r * acti_r[i][j + 1];
+//			if (i > 1)
+//				tmpacti = tmpacti + Hiddenlayers[i - 1].U_r * acti_l[i - 1][j];
+//			tmpacti = ReLU(tmpacti);
+//			if (Config::instance()->HiddenConfigs[i - 1].get_DropoutRate() < 1.0) {
+//				tmpacti = tmpacti.Mul(Config::instance()->HiddenConfigs[i - 1].get_DropoutRate());
+//			}
+//			tmpacti.copyTo(acti_r[i][j]);
+			cuMultiplication(Hiddenlayers[i - 1].U_r, acti_r[i - 1][j],
+					acti_r[i][j]);
+			if (j < T - 1) {
+				acti_r[i][j] += Hiddenlayers[i - 1].W_r
+						* acti_r[i][j + 1];
 			}
-			tmpacti.copyTo(acti_r[i][j]);
+			if (i > 1) {
+				acti_r[i][j] += Hiddenlayers[i - 1].U_r
+						* acti_l[i - 1][j];
+			}
+			acti_r[i][j].ReLU2(acti_r[i][j]);
+
 		}
 	}
-    cuMatrix M = SMR.W_l * acti_l[acti_l.size() - 1][mid];
-    M = M + SMR.W_r * acti_r[acti_r.size() - 1][mid];
+    cuMatrix M(SMR.W_l.rows(),acti_l[acti_l.size() - 1][mid].cols());
+    cuMultiplication(SMR.W_l , acti_l[acti_l.size() - 1][mid],M);
+    M +=  SMR.W_r * acti_r[acti_r.size() - 1][mid];
 	get_res_array(M, output, offset);
 }

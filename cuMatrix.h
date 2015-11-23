@@ -7,10 +7,11 @@
 #include <string.h>
 #include <vector>
 #include <memory>
+#include <map>
 #include "helper_cuda.h"
 #include "MemoryMonitor.h"
 #include "hardware.h"
-
+//#include "cuMath.h";
 using namespace std;
 class cuMatrix {
 public:
@@ -27,6 +28,18 @@ public:
 		data = make_shared < MatData > (r, c);
 		data->setGpu(src);
 	}
+	cuMatrix(shared_ptr<MatData> tmpd, int r, int c) {
+		size = r * c * sizeof(float);
+		assert(size == tmpd->sizes());
+		row = r;
+		col = c;
+		data = tmpd;
+	}
+//	static map<int, shared_ptr<MatData> >& tmpMemory(){
+//		static map<int,shared_ptr<MatData> > TmpMemory;
+//		return TmpMemory;
+//	}
+	static map<int, shared_ptr<MatData>> tmpMemory;
 	shared_ptr<MatData> data;
 	int rows() {
 		return row;
@@ -37,39 +50,41 @@ public:
 	int sizes() {
 		return size;
 	}
-	float* getDev(){
+	float* getDev() {
 		return data->getDev();
 	}
-	float* getHost(){
+	float* getHost() {
 		return data->getHost();
 	}
-	void printMat(){
+	void printMat() {
 		data->toCpu();
 		for (int i = 0; i < rows(); i++) {
 			for (int j = 0; j < cols(); j++) {
-				printf("%f,",getHost()[i*cols() + j]);
+				printf("%f,", getHost()[i * cols() + j]);
 			}
 			printf("\n");
 		}
 	}
-	float getSum(){
+	float getSum() {
 		data->toCpu();
 		float sum = 0;
 		float *tmp = getHost();
 		for (int i = 0; i < rows(); i++) {
 			for (int j = 0; j < cols(); j++) {
-				sum += tmp[i*cols() + j];
+				sum += tmp[i * cols() + j];
 			}
 		}
 		return sum;
+
 	}
-	void copyTo(cuMatrix &dst){
-		if(cols()!=dst.cols() || rows()!=dst.rows()){
+	void copyTo(cuMatrix dst, cudaStream_t stream1 = 0) {
+		if (cols() != dst.cols() || rows() != dst.rows()) {
 			printf("cuMatrix::copyTo() size error\n");
 			exit(0);
 		}
 		cudaError_t cudaStat;
-		cudaStat = cudaMemcpy(dst.data->getDev(), data->getDev(), size, cudaMemcpyDeviceToDevice);
+		cudaStat = cudaMemcpyAsync(dst.data->getDev(), data->getDev(), size,
+				cudaMemcpyDeviceToDevice, stream1);
 		if (cudaStat != cudaSuccess) {
 			printf("cuMatrix::copyTo cudaMemcpy() failed\n");
 			exit(0);
@@ -81,14 +96,27 @@ public:
 	cuMatrix operator +(float i);
 	cuMatrix operator -(cuMatrix cumat);
 	cuMatrix operator -(float i);
-	cuMatrix operator *(cuMatrix cumat);//matrix mul
+	cuMatrix operator *(cuMatrix cumat);      //matrix mul
 	cuMatrix operator *(float i);
 	cuMatrix operator /(cuMatrix cumat);
 	cuMatrix operator /(float i);
-	friend cuMatrix operator /(float i,cuMatrix cumat);
+	void operator +=(cuMatrix cumat);
+	void operator +=(float i);
+	void operator -=(cuMatrix cumat);
+	void operator -=(float i);
+	void operator /=(cuMatrix cumat);
+	void operator /=(float i);
+	void operator *=(float i);
+	void ReLU2(cuMatrix& cumat);
+	void Square2(cuMatrix& cumat);
+	void Mul2(cuMatrix cumat,cuMatrix& dst);
+	void Mul2(float i ,cuMatrix& dst);
+	friend cuMatrix operator /(float i, cuMatrix cumat);
 private:
 	int row;
 	int col;
 	int size;
 };
+//cublasHandle_t& getHandle();
+
 #endif

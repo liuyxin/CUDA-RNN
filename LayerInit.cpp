@@ -7,6 +7,7 @@ void weightRandomInit(HiddenLayer &hidden, int inputsize, int hiddensize) {
 	tmp_ran = tmp_ran * epsilon;
 	hidden.U_l = cuMatrix((float*) tmp_ran.data, hiddensize,
 			inputsize);
+
 	hidden.U_lgrad = cuMatrix(hiddensize, inputsize);
 	hidden.U_ld2 = cuMatrix(hiddensize, inputsize);
 	hidden.lr_U = Config::instance()->get_lrate_w();
@@ -72,3 +73,4 @@ void init_HLandSMR(vector<HiddenConfig> &HiddenConfigs,
 			HiddenConfigs[0].get_NeuronNum());
 	printf("init smr&hiddenlayer done!\n");
 }
+

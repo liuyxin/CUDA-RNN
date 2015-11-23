@@ -110,7 +110,7 @@ public:
 	void set_word_num(int i){
 		word_num = i;
 	}
-	int wordNum(){
+	int get_wordNum(){
 		return word_num;
 	}
 	void init(string path, SoftMax &SMR);

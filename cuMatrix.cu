@@ -1,20 +1,21 @@
 #include "cuMatrix.h"
 
 static int MAX_THREADNUM = Devices::instance()->max_ThreadsPerBlock();
+//map<int, shared_ptr<MatData> > cuMatrix::TmpMemory;
 
-cublasHandle_t& getHandle() {
-	static cublasHandle_t handle = NULL;
-	if (handle == NULL) {
-		cublasStatus_t stat;
-		stat = cublasCreate(&handle);
-		if (stat != CUBLAS_STATUS_SUCCESS) {
-			printf("init: CUBLAS initialization failed\n");
-			exit(0);
-		}
-	}
-	return handle;
-}
-
+//cublasHandle_t& getHandle() {
+//	static cublasHandle_t handle = NULL;
+//	if (handle == NULL) {
+//		cublasStatus_t stat;
+//		stat = cublasCreate(&handle);
+//		if (stat != CUBLAS_STATUS_SUCCESS) {
+//			printf("init: CUBLAS initialization failed\n");
+//			exit(0);
+//		}
+//	}
+//	return handle;
+//}
+map<int, shared_ptr<MatData>> cuMatrix::tmpMemory;
 __global__ void add_kernel(float* dev_x, float* dev_y, float* dev_z, int cols,
 		int maxt) {
 	int x = blockIdx.x;
@@ -46,10 +47,17 @@ cuMatrix cuMatrix::operator +(cuMatrix cumat) {
 	assert(cumat.rows() == rows() && cumat.cols() == cols());
 	assert(data->getDev() != NULL && cumat.data->getDev() != NULL);
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
-	cuMatrix res(rows(), cols());
+	cuMatrix res;
+	if (tmpMemory.find(size) != tmpMemory.end()) {
+		res = cuMatrix(tmpMemory[size], rows(), cols());
+	} else {
+		res = cuMatrix(rows(), cols());
+		tmpMemory[size] = res.data;
+	}
+
 	add_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(),
 			cumat.data->getDev(), res.data->getDev(), cols(), MAX_THREADNUM);
-	checkCudaErrors(cudaDeviceSynchronize());
+	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("pre-element add cuMatrix + cuMatrix");
 	return res;
 }
@@ -57,12 +65,41 @@ cuMatrix cuMatrix::operator +(cuMatrix cumat) {
 cuMatrix cuMatrix::operator +(float i) {
 	assert(data->getDev() != NULL);
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
-	cuMatrix res(rows(), cols());
+	cuMatrix res;
+	if (tmpMemory.find(size) != tmpMemory.end()) {
+		res = cuMatrix(tmpMemory[size], rows(), cols());
+	} else {
+		res = cuMatrix(rows(), cols());
+		tmpMemory[size] = res.data;
+	}
 	add_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(), i,
 			res.data->getDev(), cols(), MAX_THREADNUM);
-	checkCudaErrors(cudaDeviceSynchronize());
+	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("pre-element add cuMatrix + float");
 	return res;
+}
+
+void cuMatrix::operator +=(cuMatrix cumat) {
+	if (!size) {
+		printf("cuMatrix error:: +=\n");
+		exit(0);
+	}
+	assert(cumat.rows() == rows() && cumat.cols() == cols());
+	assert(data->getDev() != NULL && cumat.data->getDev() != NULL);
+	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
+	add_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(),
+			cumat.data->getDev(), data->getDev(), cols(), MAX_THREADNUM);
+	checkCudaErrors(cudaStreamSynchronize(0));
+	getLastCudaError("pre-element add cuMatrix + cuMatrix");
+}
+
+void cuMatrix::operator +=(float i) {
+	assert(data->getDev() != NULL);
+	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
+	add_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(), i,
+			data->getDev(), cols(), MAX_THREADNUM);
+	checkCudaErrors(cudaStreamSynchronize(0));
+	getLastCudaError("pre-element add cuMatrix + float");
 }
 
 __global__ void dec_kernel(float* dev_x, float* dev_y, float* dev_z, int cols,
@@ -97,10 +134,16 @@ cuMatrix cuMatrix::operator -(cuMatrix cumat) {
 	assert(cumat.rows() == rows() && cumat.cols() == cols());
 	assert(data->getDev() != NULL && cumat.data->getDev() != NULL);
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
-	cuMatrix res(rows(), cols());
+	cuMatrix res;
+	if (tmpMemory.find(size) != tmpMemory.end()) {
+		res = cuMatrix(tmpMemory[size], rows(), cols());
+	} else {
+		res = cuMatrix(rows(), cols());
+		tmpMemory[size] = res.data;
+	}
 	dec_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(),
 			cumat.data->getDev(), res.data->getDev(), cols(), MAX_THREADNUM);
-	checkCudaErrors(cudaDeviceSynchronize());
+	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("pre-element add cuMatrix - cuMatrix");
 	return res;
 }
@@ -108,12 +151,40 @@ cuMatrix cuMatrix::operator -(cuMatrix cumat) {
 cuMatrix cuMatrix::operator -(float i) {
 	assert(data->getDev() != NULL);
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
-	cuMatrix res(rows(), cols());
+	cuMatrix res;
+	if (tmpMemory.find(size) != tmpMemory.end()) {
+		res = cuMatrix(tmpMemory[size], rows(), cols());
+	} else {
+		res = cuMatrix(rows(), cols());
+		tmpMemory[size] = res.data;
+	}
 	dec_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(), i,
 			res.data->getDev(), cols(), MAX_THREADNUM);
-	checkCudaErrors(cudaDeviceSynchronize());
+	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("pre-element add cuMatrix - float");
 	return res;
+}
+
+void cuMatrix::operator -=(cuMatrix cumat) {
+	if (!size) {
+		printf("cuMatrix:: -= error\n");
+	}
+	assert(cumat.rows() == rows() && cumat.cols() == cols());
+	assert(data->getDev() != NULL && cumat.data->getDev() != NULL);
+	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
+	dec_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(),
+			cumat.data->getDev(), data->getDev(), cols(), MAX_THREADNUM);
+	checkCudaErrors(cudaStreamSynchronize(0));
+	getLastCudaError("pre-element add cuMatrix - cuMatrix");
+}
+
+void cuMatrix::operator -=(float i) {
+	assert(data->getDev() != NULL);
+	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
+	dec_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(), i,
+			data->getDev(), cols(), MAX_THREADNUM);
+	checkCudaErrors(cudaStreamSynchronize(0));
+	getLastCudaError("pre-element add cuMatrix - float");
 }
 
 __global__ void mul_kernel(float* dev_x, float* dev_y, float* dev_z, int cols,
@@ -136,37 +207,81 @@ __global__ void mul_kernel(float* dev_x, float y_, float* dev_z, int cols,
 }
 
 cuMatrix cuMatrix::Mul(cuMatrix cumat) {
-	assert(cumat.rows() == rows() && cumat.cols() == cols());
+	assert(cumat.sizes() == sizes());
 	assert(data->getDev() != NULL && cumat.data->getDev() != NULL);
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
-	cuMatrix res(rows(), cols());
+	cuMatrix res;
+	if (tmpMemory.find(size) != tmpMemory.end()) {
+		res = cuMatrix(tmpMemory[size], rows(), cols());
+	} else {
+		res = cuMatrix(rows(), cols());
+		tmpMemory[size] = res.data;
+	}
 	mul_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(),
 			cumat.data->getDev(), res.data->getDev(), cols(), MAX_THREADNUM);
-	checkCudaErrors(cudaDeviceSynchronize());
+	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("pre-element add cuMatrix * cuMatrix");
 	return res;
+}
+
+void cuMatrix::Mul2(cuMatrix cumat,cuMatrix& dst){
+	assert(cumat.sizes() == sizes());
+	assert(cumat.sizes() == dst.sizes());
+	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
+	mul_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(),
+				cumat.data->getDev(), dst.data->getDev(), cols(), MAX_THREADNUM);
+	checkCudaErrors(cudaStreamSynchronize(0));
+	getLastCudaError("pre-element add cuMatrix * cuMatrix");
+}
+
+void cuMatrix::Mul2(float i ,cuMatrix& res){
+	assert(sizes() == res.sizes());
+	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
+	mul_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(), i,
+				res.data->getDev(), cols(), MAX_THREADNUM);
+	checkCudaErrors(cudaStreamSynchronize(0));
+	getLastCudaError("cuMatrix::Mul2(float i ,cuMatrix& res)");
 }
 
 cuMatrix cuMatrix::operator *(float i) {
 	assert(data->getDev() != NULL);
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
-	cuMatrix res(rows(), cols());
+	cuMatrix res;
+	if (tmpMemory.find(size) != tmpMemory.end()) {
+		res = cuMatrix(tmpMemory[size], rows(), cols());
+	} else {
+		res = cuMatrix(rows(), cols());
+		tmpMemory[size] = res.data;
+	}
 	mul_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(), i,
 			res.data->getDev(), cols(), MAX_THREADNUM);
-	checkCudaErrors(cudaDeviceSynchronize());
+	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("pre-element add cuMatrix * float");
 	return res;
 }
 //res = this * cumat
-
-//res = this * cumat
 cuMatrix cuMatrix::operator *(cuMatrix cumat) {
 	assert(cols() == cumat.rows());
-	cuMatrix res(rows(), cumat.cols());
+//	cuMatrix res(rows(), cumat.cols());
+	cuMatrix res;
+	int tmpSize = rows() * cumat.cols() * sizeof(float);
+	if (tmpMemory.find(tmpSize) != tmpMemory.end()) {
+		res = cuMatrix(tmpMemory[tmpSize], rows(), cumat.cols());
+	} else {
+		res = cuMatrix(rows(), cumat.cols());
+		tmpMemory[tmpSize] = res.data;
+	}
 	float alpha = 1.0;
 	float beta = 0.0;
+	cublasHandle_t handle = NULL;
 	cublasStatus_t stat;
-	stat = cublasSgemm(getHandle(), CUBLAS_OP_N, CUBLAS_OP_N, cumat.cols(),
+	stat = cublasCreate(&handle);
+	if (stat != CUBLAS_STATUS_SUCCESS) {
+		printf("init: CUBLAS initialization failed\n");
+		exit(0);
+	}
+
+	stat = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, cumat.cols(),
 			rows(), cumat.rows(), &alpha, cumat.getDev(), cumat.cols(),
 			getDev(), cols(), &beta, res.getDev(), res.cols());
 	cudaStreamSynchronize(0);
@@ -174,7 +289,21 @@ cuMatrix cuMatrix::operator *(cuMatrix cumat) {
 		printf("cuMatrix::Mul() error\n");
 		exit(0);
 	}
+	stat = cublasDestroy(handle);
+	if (stat != CUBLAS_STATUS_SUCCESS) {
+			printf("init: CUBLAS destory failed\n");
+			exit(0);
+		}
 	return res;
+}
+
+void cuMatrix::operator *=(float i) {
+	assert(data->getDev() != NULL);
+	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
+	mul_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(), i,
+			data->getDev(), cols(), MAX_THREADNUM);
+	checkCudaErrors(cudaStreamSynchronize(0));
+	getLastCudaError("pre-element add cuMatrix * float");
 }
 
 __global__ void div_kernel(float* dev_x, float* dev_y, float* dev_z, int cols,
@@ -184,6 +313,9 @@ __global__ void div_kernel(float* dev_x, float* dev_y, float* dev_z, int cols,
 	while (y < cols) {
 		if (dev_y[x * cols + y] != 0) {
 			dev_z[x * cols + y] = dev_x[x * cols + y] / dev_y[x * cols + y];
+		}
+		else{
+			dev_z[x * cols + y] = 0;
 		}
 		y += maxt;
 	}
@@ -196,6 +328,9 @@ __global__ void div_kernel(float* dev_x, float y_, float* dev_z, int cols,
 		if (y_ != 0) {
 			dev_z[x * cols + y] = dev_x[x * cols + y] / y_;
 		}
+		else{
+			dev_z[x * cols + y] = 0;
+		}
 		y += maxt;
 	}
 }
@@ -204,10 +339,16 @@ cuMatrix cuMatrix::operator /(cuMatrix cumat) {
 	assert(cumat.rows() == rows() && cumat.cols() == cols());
 	assert(data->getDev() != NULL && cumat.data->getDev() != NULL);
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
-	cuMatrix res(rows(), cols());
+	cuMatrix res;
+	if (tmpMemory.find(size) != tmpMemory.end()) {
+		res = cuMatrix(tmpMemory[size], rows(), cols());
+	} else {
+		res = cuMatrix(rows(), cols());
+		tmpMemory[size] = res.data;
+	}
 	div_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(),
 			cumat.data->getDev(), res.data->getDev(), cols(), MAX_THREADNUM);
-	checkCudaErrors(cudaDeviceSynchronize());
+	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("pre-element add cuMatrix / cuMatrix");
 	return res;
 }
@@ -216,12 +357,38 @@ cuMatrix cuMatrix::operator /(float i) {
 	assert(data->getDev() != NULL);
 	assert(i != 0);
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
-	cuMatrix res(rows(), cols());
+	cuMatrix res;
+	if (tmpMemory.find(size) != tmpMemory.end()) {
+		res = cuMatrix(tmpMemory[size], rows(), cols());
+	} else {
+		res = cuMatrix(rows(), cols());
+		tmpMemory[size] = res.data;
+	}
 	div_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(), i,
 			res.data->getDev(), cols(), MAX_THREADNUM);
-	checkCudaErrors(cudaDeviceSynchronize());
+	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("pre-element add cuMatrix / float");
 	return res;
+}
+
+void cuMatrix::operator /=(cuMatrix cumat) {
+	assert(cumat.rows() == rows() && cumat.cols() == cols());
+	assert(data->getDev() != NULL && cumat.data->getDev() != NULL);
+	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
+	div_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(),
+			cumat.data->getDev(), data->getDev(), cols(), MAX_THREADNUM);
+	checkCudaErrors(cudaStreamSynchronize(0));
+	getLastCudaError("pre-element add cuMatrix / cuMatrix");
+}
+
+void cuMatrix::operator /=(float i) {
+	assert(data->getDev() != NULL);
+	assert(i != 0);
+	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
+	div_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(), i,
+			data->getDev(), cols(), MAX_THREADNUM);
+	checkCudaErrors(cudaStreamSynchronize(0));
+	getLastCudaError("pre-element add cuMatrix / float");
 }
 
 __global__ void t_kernel(float* dev_src, float* dev_res, int res_r, int res_c,
@@ -236,128 +403,96 @@ __global__ void t_kernel(float* dev_src, float* dev_res, int res_r, int res_c,
 
 cuMatrix cuMatrix::t() {
 	assert(cols() != 0 && rows() != 0);
-	cuMatrix res(cols(), rows());
+//	cuMatrix res(cols(), rows());
+	cuMatrix res;
+	if (tmpMemory.find(size) != tmpMemory.end()) {
+		res = cuMatrix(tmpMemory[size], cols(), rows());
+	} else {
+		res = cuMatrix(cols(), rows());
+		tmpMemory[size] = res.data;
+	}
 	int threadnum = MAX_THREADNUM > res.cols() ? res.cols() : MAX_THREADNUM;
 	t_kernel<<<dim3(res.rows()), dim3(threadnum)>>>(data->getDev(),
 			res.data->getDev(), res.rows(), res.cols(), MAX_THREADNUM);
-	checkCudaErrors(cudaDeviceSynchronize());
+	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("pre-element add cuMatrix / float");
 	return res;
 }
 
-__global__ void Div_kernel(float x_, float* dev_y, float* dev_z,
-		int cols, int maxt) {
+__global__ void Div_kernel(float x_, float* dev_y, float* dev_z, int cols,
+		int maxt) {
 	int x = blockIdx.x;
 	int y = threadIdx.x;
 	while (y < cols) {
 		if (dev_y[x * cols + y] != 0) {
 			dev_z[x * cols + y] = x_ / dev_y[x * cols + y];
 		}
+		else{
+			dev_z[x * cols + y] = 0;
+		}
 		y += maxt;
 	}
 }
 cuMatrix operator /(float x, cuMatrix cumat) {
-	cuMatrix res(cumat.rows(), cumat.cols());
+	cuMatrix res;
+	if (cuMatrix::tmpMemory.find(cumat.sizes())
+			!= cuMatrix::tmpMemory.end()) {
+		res = cuMatrix(cuMatrix::tmpMemory[cumat.sizes()], cumat.rows(),
+				cumat.cols());
+	} else {
+		res = cuMatrix(cumat.rows(), cumat.cols());
+		cuMatrix::tmpMemory[cumat.sizes()] = res.data;
+	}
 	int threadnum = MAX_THREADNUM > cumat.cols() ? cumat.cols() : MAX_THREADNUM;
 	Div_kernel<<<dim3(cumat.rows()), dim3(threadnum)>>>(x, cumat.getDev(),
 			res.getDev(), cumat.cols(), MAX_THREADNUM);
-	checkCudaErrors(cudaDeviceSynchronize());
+	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("ElementDiv double matrix matrix ");
 	return res;
 }
 
-//__global__ void ReLU_kernel(float* src, float* dst, int rows, int cols,
-//		int maxt) {
-//	int x = blockIdx.x;
-//	int y = threadIdx.x;
-//	while (y < cols) {
-//		assert(x * cols + y < rows * cols);
-//		if (src[x * cols + y] <= 0) {
-//			dst[x * cols + y] = 0;
-//		} else {
-//			dst[x * cols + y] = src[x * cols + y];
-//		}
-//		y += maxt;
-//	}
-//}
-//
-//cuMatrix ReLU(cuMatrix& cumat) {
-//	cuMatrix res(cumat.rows(), cumat.cols());
-//	int threadnum = MAX_THREADNUM > cumat.cols() ? cumat.cols() : MAX_THREADNUM;
-//	ReLU_kernel<<<dim3(cumat.rows()), dim3(threadnum)>>>(cumat.getDev(),
-//			res.getDev(), cumat.rows(), cumat.cols(), MAX_THREADNUM);
-//	checkCudaErrors(cudaDeviceSynchronize());
-//	getLastCudaError("ReLU ");
-//	return res;
-//}
-//
-//__global__ void dReLU_kernel(float* src, float* dst, int cols, int maxt) {
-//	int x = blockIdx.x;
-//	int y = threadIdx.x;
-//	while (y < cols) {
-//		if (src[x * cols + y] <= 0) {
-//			dst[x * cols + y] = 0;
-//		} else {
-//			dst[x * cols + y] = 1;
-//		}
-//		y += maxt;
-//	}
-//}
-//
-//cuMatrix dReLU(cuMatrix cumat) {
-//	cuMatrix res(cumat.rows(), cumat.cols());
-//	int threadnum = MAX_THREADNUM > cumat.cols() ? cumat.cols() : MAX_THREADNUM;
-//	dReLU_kernel<<<dim3(cumat.rows()), dim3(threadnum)>>>(cumat.getDev(),
-//			res.getDev(), cumat.cols(), MAX_THREADNUM);
-//	getLastCudaError("dReLU ");
-//	return res;
-//}
-//
-//__global__ void reduce_max_kernel(float* dev_x, float* dev_y, int rows,
-//		int cols, int maxt) {
-//	int tid = threadIdx.x;
-//	while (tid < cols) {
-//		float max = (float) LONG_MIN;
-//		for (int i = 0; i < rows; i++) {
-//			max = max > dev_x[i * cols + tid] ? max : dev_x[i * cols + tid];
-//		}
-//		for (int i = 0; i < rows; i++) {
-//			dev_y[i * cols + tid] = max;
-//		}
-//		tid += maxt;
-//	}
-//}
-//
-//cuMatrix reduceMax(cuMatrix src) {
-//	cuMatrix res(src.rows(), src.cols());
-//	int threadnum = MAX_THREADNUM > src.cols() ? src.cols() : MAX_THREADNUM;
-//	reduce_max_kernel<<<dim3(1), dim3(threadnum)>>>(src.getDev(),
-//			res.getDev(), src.rows(), src.cols(), MAX_THREADNUM);
-//	checkCudaErrors(cudaDeviceSynchronize());
-//	getLastCudaError("reduce_max");
-//	return res;
-//}
-////  share memory?
-//__global__ void reduce_sum_kernel(float* dev_x, float* dev_y, int rows,
-//		int cols, int maxt) {
-//	int tidx = blockIdx.x;
-//	int tidy = threadIdx.x;
-//	float sum = 0;
-//	while (tidy < cols) {
-//		for (int i = 0; i < rows; i++) {
-//			sum += dev_x[i * cols + tidy];
-//		}
-//		dev_y[tidx * cols + tidy] = sum;
-//		tidy += maxt;
-//	}
-//}
-//
-//cuMatrix reduceSum(cuMatrix src) {
-//	cuMatrix res(src.rows(), src.cols());
-//	int threadnum = MAX_THREADNUM > src.cols() ? src.cols() : MAX_THREADNUM;
-//	reduce_sum_kernel<<<dim3(src.rows()), dim3(threadnum)>>>(src.getDev(),
-//			res.getDev(), src.rows(), src.cols(), MAX_THREADNUM);
-//	checkCudaErrors(cudaDeviceSynchronize());
-//	getLastCudaError("reduce_sum");
-//	return res;
-//}
+__global__ void ReLU2_kernel(float* src, float* dst, int rows, int cols,
+		int maxt) {
+	int x = blockIdx.x;
+	int y = threadIdx.x;
+	while (y < cols) {
+		assert(x * cols + y < rows * cols);
+		if (src[x * cols + y] <= 0) {
+			dst[x * cols + y] = 0;
+		} else {
+			dst[x * cols + y] = src[x * cols + y];
+		}
+		y += maxt;
+	}
+}
+
+void cuMatrix::ReLU2(cuMatrix& cumat) {
+	assert(sizes() == cumat.sizes());
+	int threadnum = MAX_THREADNUM > cumat.cols() ? cumat.cols() : MAX_THREADNUM;
+	ReLU2_kernel<<<dim3(cumat.rows()), dim3(threadnum)>>>(getDev(),
+			cumat.getDev(), cumat.rows(), cumat.cols(), threadnum);
+	checkCudaErrors(cudaStreamSynchronize(0));
+	getLastCudaError("ReLU2");
+}
+
+__global__ void square_kernel(float* dev_x, float y_, float* dev_z, int cols,
+		int maxt) {
+	int x = blockIdx.x;
+	int y = threadIdx.x;
+	while (y < cols) {
+		dev_z[x * cols + y] = pow(dev_x[x * cols + y], y_);
+		y += maxt;
+	}
+}
+
+void cuMatrix::Square2(cuMatrix& cumat){
+	assert(sizes() == cumat.sizes());
+	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
+	square_kernel<<<dim3(rows()), dim3(threadnum)>>>( getDev(), 2.0f,
+			cumat.getDev(), cols(), threadnum);
+	checkCudaErrors(cudaStreamSynchronize(0));
+	getLastCudaError("ElementPow matrix float matrix ");
+
+}
+
+

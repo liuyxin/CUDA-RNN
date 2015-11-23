@@ -53,6 +53,7 @@ int main() {
 	readdata("dataset/news_tagged_data.txt", traindata, testdata, re_label,
 			labelmap);
 	removeNumber(traindata);
+
 	getWordMap(traindata, wordmap, re_word);
 	vector<vector<int> > trainX;
 	vector<vector<int> > trainY;
@@ -63,11 +64,12 @@ int main() {
 	Config::instance()->set_word_num(re_word.size());
 	Config::instance()->set_trainX_num(trainX.size());
 	Config::instance()->set_testX_num(testX.size());
-	cout<< Config::instance()->wordNum()<<endl
+	cout<< Config::instance()->get_wordNum()<<endl
 		<<Config::instance()->trainXNum()<<endl
 		<<Config::instance()->testXNum()<<endl;
 	init_HLandSMR(Config::instance()->HiddenConfigs, Hiddenlayers, SMR,
 			re_word.size());
+
 	Data2GPU(trainX, trainY, testX, testY);
 	trainNetwork(Hiddenlayers,SMR,re_word.size());
 	return 0;
