@@ -305,7 +305,7 @@ void getNetworkCost(cuMatrixVector &acti_0, cuMatrix &sampleY,
 		Hiddenlayers[i].U_rd2 = tmp2 / nSamples
 				+ Config::instance()->HiddenConfigs[i].get_WeightDecay();
 		tmp = *delta_r[i + 1][0] * acti_r[i + 1][1].t();
-		tmp2 = *delta_rd2[i + 1][0] * Pow(acti_l[i + 1][1].t(), 2.0);
+		tmp2 = *delta_rd2[i + 1][0] * Pow(acti_r[i + 1][1].t(), 2.0);
 		for (int j = 1; j < T - 1; j++) {
 			tmp = tmp + *delta_r[i + 1][j] * acti_r[i + 1][j + 1].t();
 			tmp2 = tmp2
