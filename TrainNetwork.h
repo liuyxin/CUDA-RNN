@@ -9,6 +9,7 @@
 #include "resultPredict.h"
 #include <stdio.h>
 #include <iostream>
+#include <time.h>
 using namespace std;
 void trainNetwork(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR,
 		int reword_size);

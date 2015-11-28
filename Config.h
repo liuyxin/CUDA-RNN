@@ -24,13 +24,6 @@ public:
 		static Config* config = new Config();
 		return config;
 	}
-
-	bool get_gradient() {
-		return is_gradient_checking;
-	}
-	void set_gradien(bool i) {
-		is_gradient_checking = i;
-	}
 	bool get_use_log() {
 		return non_linearity;
 	}
@@ -115,7 +108,6 @@ public:
 	}
 	void init(string path, SoftMax &SMR);
 private:
-	bool is_gradient_checking;
 	bool use_log;
 	int non_linearity;
 	int batch_size;

@@ -216,13 +216,6 @@ void Config::init(string path,
 	deleteComment();
 	deleteSpace();
 	get_layers_config(m_configStr,SMR);
-	is_gradient_checking = get_word_bool(m_configStr, "IS_GRADIENT_CHECKING");
-
-	if (is_gradient_checking) {
-		for (int i = 0; i < HiddenConfigs.size(); i++) {
-			HiddenConfigs[i].set_DropoutRate(1.0);
-		}
-	}
 	use_log = get_word_bool(m_configStr, "USE_LOG");
 	batch_size = get_word_int(m_configStr, "BATCH_SIZE");
 	non_linearity = get_word_type(m_configStr, "NON_LINEARITY");
@@ -251,7 +244,6 @@ void Config::init(string path,
 	//    cout<<"NumClasses = "<<softmaxConfig.NumClasses<<endl;
 	cout << "WeightDecay = " << SMR.get_WeightDecay() << endl << endl;
 	cout << "***** general config *****" << endl;
-	cout << "is_gradient_checking = " << is_gradient_checking << endl;
 	cout << "use_log = " << use_log << endl;
 	cout << "batch size = " << batch_size << endl;
 	cout << "non-linearity method = " << non_linearity << endl;

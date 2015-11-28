@@ -4,7 +4,10 @@
 #include <cuda_runtime.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "helper_cuda.h"
+#include "curand.h"
+#include "cuda.h"
 #include "cuMatrix.h"
 #include "hardware.h"
 
@@ -23,4 +26,6 @@ void cuPlus(cuMatrix src1,cuMatrix src2,cuMatrix dst);
 void cuDec(cuMatrix src1, cuMatrix src2, cuMatrix dst);
 void cuDiv(cuMatrix src1, cuMatrix src2, cuMatrix dst);
 void cuDiv(float src1, cuMatrix src2, cuMatrix dst);
+void creatBnl(cuMatrix& bnl,float threshold);
+
 #endif

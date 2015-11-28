@@ -1,5 +1,6 @@
 #ifndef COSTGRADIENT_H
 #define COSTGRADIENT_H
+
 #include <cuda_runtime.h>
 #include "cuMatrix.h"
 #include "cuMatrixVector.h"
@@ -15,7 +16,8 @@ static vector<vector<cuMatrix> > acti_sum;
 static vector<vector<cuMatrix> > acti2_sum;
 static vector<vector<cuMatrix> > nonlin_l;
 static vector<vector<cuMatrix> > nonlin_r;
-
+static vector<vector<cuMatrix> > bernoulli_l;
+static vector<vector<cuMatrix> > bernoulli_r;
 static vector<cuMatrix> p;
 static vector<cuMatrix> groundTruth;
 static vector<cuMatrix> dis;

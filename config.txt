@@ -7,8 +7,6 @@
 *	General Parameters Config
 *
 *******************************************************/
-
-IS_GRADIENT_CHECKING = false;
 USE_LOG = false;
 NON_LINEARITY = NL_RELU;
 BATCH_SIZE = 50;
@@ -30,8 +28,17 @@ $
 LAYER = HIDDEN;
 NUM_HIDDEN_NEURONS = 512;
 WEIGHT_DECAY = 1e-6;
-DROPOUT_RATE = 1.0;
+DROPOUT_RATE = 0.5;
 &
+
+
+$
+LAYER = HIDDEN;
+NUM_HIDDEN_NEURONS = 512;
+WEIGHT_DECAY = 1e-6;
+DROPOUT_RATE = 0.5;
+&
+
 
 $
 LAYER = SOFTMAX;
