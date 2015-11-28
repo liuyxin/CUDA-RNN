@@ -60,12 +60,20 @@ void costParamentInit(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR) {
 				cuMatrix(SMR.get_NumClasses(),
 						acti_l[acti_l.size() - 1][j].cols()));
 	}
-	for (int i = 0; i < delta_l.size(); i++) {
+
+	for (int j = 0; j < T; j++) {
+		delta_l[delta_l.size() - 1].push_back(cuMatrix(SMR.W_l.cols(), dis[0].cols()));
+		delta_ld2[delta_l.size() - 1].push_back(cuMatrix(SMR.W_l.cols(), dis[0].cols()));
+		delta_r[delta_l.size() - 1].push_back(cuMatrix(SMR.W_r.cols(), dis[0].cols()));
+		delta_rd2[delta_l.size() - 1].push_back(cuMatrix(SMR.W_r.cols(), dis[0].cols()));
+	}
+	for (int i = delta_l.size() - 2 ; i > 0; i--) {
 		for (int j = 0; j < T; j++) {
-			delta_l[i].push_back(cuMatrix(SMR.W_l.cols(), dis[0].cols()));
-			delta_ld2[i].push_back(cuMatrix(SMR.W_l.cols(), dis[0].cols()));
-			delta_r[i].push_back(cuMatrix(SMR.W_r.cols(), dis[0].cols()));
-			delta_rd2[i].push_back(cuMatrix(SMR.W_r.cols(), dis[0].cols()));
+//			hLayers[i].U_l.t() * delta_l[i + 1][j];
+			delta_l[i].push_back(cuMatrix(Hiddenlayers[i].U_l.cols(), delta_l[i + 1][j].cols()));
+			delta_ld2[i].push_back(cuMatrix(Hiddenlayers[i].U_l.cols(), delta_l[i + 1][j].cols()));
+			delta_r[i].push_back(cuMatrix(Hiddenlayers[i].U_r.cols(), delta_r[i + 1][j].cols()));
+			delta_rd2[i].push_back(cuMatrix(Hiddenlayers[i].U_r.cols(), delta_r[i + 1][j].cols()));
 		}
 	}
 }
@@ -88,9 +96,9 @@ void getNetworkCost(cuMatrixVector &acti_0, cuMatrix &sampleY,
 	for (int i = 1; i <= HiddenNum; i++) {
 // time forward
 		for (int j = 0; j < T; j++) {
+
 			cuMultiplication(Hiddenlayers[i - 1].U_l, acti_l[i - 1][j],
 					nonlin_l[i - 1][j]);
-
 			if (j > 0) {
 				nonlin_l[i - 1][j] += Hiddenlayers[i - 1].W_l
 						* acti_l[i][j - 1];
@@ -131,6 +139,7 @@ void getNetworkCost(cuMatrixVector &acti_0, cuMatrix &sampleY,
 			acti_r[i][j].Square2(acti_r2[i][j]);
 		}
 	}
+
 	for (int i = 1; i < acti_r.size(); i++) {
 		for (int j = 0; j < T; j++) {
 			cuPlus(acti_r[i][j], acti_l[i][j], acti_sum[i][j]);
@@ -192,6 +201,7 @@ void getNetworkCost(cuMatrixVector &acti_0, cuMatrix &sampleY,
 		dis[i].Square2(dis2[i]);
 	}
 //Smr t-forward
+
 	cuMultiplication(dis[0], acti_l[acti_l.size() - 1][0].t(), SMR.W_lgrad);
 	SMR.W_lgrad *= -1.0f;
 	for (int i = 1; i < T; i++) {
@@ -290,6 +300,7 @@ void getNetworkCost(cuMatrixVector &acti_0, cuMatrix &sampleY,
 					delta_l[i][j]);
 			cuMultiplication(Pow(Hiddenlayers[i].U_l.t(), 2.0),
 					delta_ld2[i + 1][j], delta_ld2[i][j]);
+
 			if (j < T - 1) {
 				delta_l[i][j] += Hiddenlayers[i - 1].W_l.t()
 						* delta_l[i][j + 1];
@@ -305,10 +316,11 @@ void getNetworkCost(cuMatrixVector &acti_0, cuMatrix &sampleY,
 					delta_ld2[i][j]);
 			if (Config::instance()->HiddenConfigs[i - 1].get_DropoutRate()
 					< 1.0) {
-				delta_l[i][j].Mul2(bernoulli_l[i - 1][j],delta_l[i][j]);
-				delta_ld2[i][j].Mul2(bernoulli_l[i - 1][j],delta_ld2[i][j]);
+				delta_l[i][j].Mul2(bernoulli_l[i - 1][j], delta_l[i][j]);
+				delta_ld2[i][j].Mul2(bernoulli_l[i - 1][j], delta_ld2[i][j]);
 			}
 		}
+
 		//t-backward
 		for (int j = 0; j < T; j++) {
 			cuMultiplication(Hiddenlayers[i].U_r.t(), delta_r[i + 1][j],
@@ -330,12 +342,11 @@ void getNetworkCost(cuMatrixVector &acti_0, cuMatrix &sampleY,
 					delta_rd2[i][j]);
 			if (Config::instance()->HiddenConfigs[i - 1].get_DropoutRate()
 					< 1.0) {
-				delta_r[i][j].Mul2(bernoulli_r[i - 1][j],delta_r[i][j]);
-				delta_rd2[i][j].Mul2(bernoulli_r[i - 1][j],delta_rd2[i][j]);
+				delta_r[i][j].Mul2(bernoulli_r[i - 1][j], delta_r[i][j]);
+				delta_rd2[i][j].Mul2(bernoulli_r[i - 1][j], delta_rd2[i][j]);
 			}
 		}
 	}
-//***************************************************
 
 	for (int i = HiddenNum - 1; i >= 0; i--) {
 		// forward part.
