@@ -23,7 +23,6 @@ public:
 		cout << "device name:" << prop.name << endl;
 	}
 	int max_ThreadsPerBlock() {
-		cout << "max threads per block:" << prop.maxThreadsPerBlock << endl;
 		return prop.maxThreadsPerBlock;
 	}
 	//max thread num in every dim;
