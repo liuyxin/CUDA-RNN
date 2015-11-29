@@ -85,7 +85,7 @@ void trainNetwork(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR,
 				Momentum_u = 0.95;
 				Momentum_d2 = 0.90;
 			}
-//			cout << "epoch: " << epo << ", iter: " << k << endl;
+			cout << "epoch: " << epo << ", iter: " << k << ": ";
 			init_acti0(acti_0, sampleY);
 
 			getNetworkCost(acti_0, sampleY, Hiddenlayers, SMR);
