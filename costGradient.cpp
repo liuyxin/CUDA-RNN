@@ -190,10 +190,10 @@ void getNetworkCost(cuMatrixVector &acti_0, cuMatrix &sampleY,
 		j4 += Pow(Hiddenlayers[i].U_r, 2).getSum();
 		j4 = j4 * Config::instance()->HiddenConfigs[i].get_WeightDecay() / 2;
 	}
-//	SMR.cost = j1 + j2 + j3 + j4;
-//
-//	printf("j1 = %f,j2 = %f,j3 = %f,j4 = %f,smr.cost = %f\n", j1, j2, j3, j4,
-//			SMR.cost);
+	SMR.cost = j1 + j2 + j3 + j4;
+
+	printf("j1 = %f,j2 = %f,j3 = %f,j4 = %f,smr.cost = %f\n", j1, j2, j3, j4,
+			SMR.cost);
 
 // SMR backward
 	for (int i = 0; i < T; i++) {
