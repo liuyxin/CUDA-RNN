@@ -15,13 +15,19 @@ void testNetwork(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR, bool flag) {
 		getDataMat(sampleX, offset, batch_size, wn, flag);
 
 		predict(sampleX, Hiddenlayers, SMR, res, offset);
-	}
+        for(int j = sampleX.size() - 1 ; j >= 0; j--){
+            delete sampleX[j];
+        }
+    }
 	offset = batch_amount * batch_size;
 	if (size % batch_size) {
 		batch_size = size % batch_size;
 		cuMatrixVector sampleX;
 		getDataMat(sampleX, offset, batch_size, wn, size);
 		predict(sampleX, Hiddenlayers, SMR, res, offset);
+        for(int j = sampleX.size() - 1 ; j >= 0; j--){
+            delete sampleX[j];
+        }
 	}
 	set_label(truth, size, flag);
 	int error = 0;
