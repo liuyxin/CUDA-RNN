@@ -443,7 +443,7 @@ void getNetworkCost(cuMatrixVector &acti_0, cuMatrix &sampleY,
 		Hiddenlayers[i].W_rd2 +=
 				Config::instance()->HiddenConfigs[i].get_WeightDecay();
 	}
-	for (int x = 0; x < 5; x++) {
+	for (int x = 0; x < T; x++) {
 		cudaMemsetAsync(acti_0[x]->getDev(), 0, acti_0[x]->sizes(), 0);
 		cudaMemsetAsync(groundTruth[x].getDev(), 0, groundTruth[x].sizes(), 0);
 	}

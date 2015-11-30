@@ -138,11 +138,6 @@ void trainNetwork(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR,
 				Hiddenlayers[i].U_r -= v_hl_U_r[i];
 			}
 		}
-		printf("k = %d\n",k);
-		printf("Testing training data: \n");
-		testNetwork(Hiddenlayers, SMR, 0);
-		printf("Testing test data: \n");
-		testNetwork(Hiddenlayers, SMR, 1);
 	}
 	trainEnd = time(NULL);
 	int sec = trainEnd - trainBegin;
@@ -150,5 +145,9 @@ void trainNetwork(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR,
 	sec = sec % 60;
 	printf("Training time : %d'%d\"\n",min,sec );
 
+		printf("Testing training data: \n");
+		testNetwork(Hiddenlayers, SMR, 0);
+		printf("Testing test data: \n");
+		testNetwork(Hiddenlayers, SMR, 1);
 }
 

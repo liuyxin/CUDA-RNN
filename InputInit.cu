@@ -68,10 +68,10 @@ void initTestdata(vector<vector<int> > &testX, vector<vector<int> > &testY) {
 	int *host_Y = (int *) malloc(
 			sizeof(int) * testY.size() * Config::instance()->get_ngram());
 	for (int i = 0; i < testX.size(); i++) {
-		memcpy(host_X + i * 5, &testX[i][0], sizeof(int) * 5);
+		memcpy(host_X + i * Config::instance()->get_ngram(), &testX[i][0], sizeof(int) * Config::instance()->get_ngram());
 	}
 	for (int i = 0; i < testY.size(); i++) {
-		memcpy(host_Y + i * 5, &testY[i][0], sizeof(int) * 5);
+		memcpy(host_Y + i * Config::instance()->get_ngram(), &testY[i][0], sizeof(int) * Config::instance()->get_ngram());
 	}
 	Samples::instance()->testX2gpu(host_X,
 			sizeof(int) * testX.size() * Config::instance()->get_ngram());
@@ -87,10 +87,10 @@ void initTraindata(vector<vector<int> > &trainX, vector<vector<int> > &trainY) {
 	int *host_Y = (int *) malloc(
 			sizeof(int) * trainY.size() * Config::instance()->get_ngram());
 	for (int i = 0; i < trainX.size(); i++) {
-		memcpy(host_X + i * 5, &trainX[i][0], sizeof(int) * 5);
+		memcpy(host_X + i * Config::instance()->get_ngram(), &trainX[i][0], sizeof(int) * Config::instance()->get_ngram());
 	}
 	for (int i = 0; i < trainY.size(); i++) {
-		memcpy(host_Y + i * 5, &trainY[i][0], sizeof(int) * 5);
+		memcpy(host_Y + i * Config::instance()->get_ngram(), &trainY[i][0], sizeof(int) * Config::instance()->get_ngram());
 	}
 	Samples::instance()->trainX2gpu(host_X,
 			sizeof(int) * trainX.size() * Config::instance()->get_ngram());
