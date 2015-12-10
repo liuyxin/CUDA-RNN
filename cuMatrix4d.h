@@ -33,7 +33,18 @@ class cuMatrix4d {
 			size = len_ * sizeof(float);
 			data = std::make_shared< MatData >(r,c,ch,t);
 		}	
-
+		cuMatrix4d(std::shared_ptr<MatData> td,int r,int c,int ch,int t){
+			row = r;
+			col = c;
+			channal = ch;
+			timeStep = t;
+			area2 = r * c;
+			area3 = r * c * ch;
+			len_ = area3 * t;		
+			size = len_ * sizeof(float);
+			assert(size == td->sizes());
+			data = td;
+		}	
 		int rows() {
 			return row;
 		}
@@ -55,7 +66,7 @@ class cuMatrix4d {
 		int len(){
 			return len_;
 		}
-		int sizes() {
+		unsigned int sizes() {
 			return size;
 		}
 		float* getDev() {
@@ -109,7 +120,7 @@ class cuMatrix4d {
 		int area2;
 		int area3;
 		int len_;
-		int size;
+		unsigned int size;
 };
 cublasHandle_t& getHandle();
 void cuMatrix4d_Add(cuMatrix4d& src1,cuMatrix4d& src2, cuMatrix4d& dst);	
@@ -118,5 +129,6 @@ void cuMatrix4d_matMul(cuMatrix4d& src1,cuMatrix4d& src2, cuMatrix4d& dst);
 //dst = src1.Mul(src2);
 void cuMatrix4d_eleMul(cuMatrix4d& src1,cuMatrix4d& src2, cuMatrix4d& dst);	
 
+void cuMatrix4dRightTrans(cuMatrix4d& src,cuMatrix& dst);
 
 #endif

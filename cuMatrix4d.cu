@@ -68,27 +68,79 @@ void cuMatrix4d_matMul(cuMatrix4d& src1,cuMatrix4d& src2, cuMatrix4d& dst)
 	assert(src1.ts() == src2.ts() && src1.ts() == dst.ts());
 	float alpha = 1.0;
 	float beta = 0.0;
-	for(int i = 0 ; i < src1.ts() ; i ++){
-		for(int j = 0 ; j < src1.channals() ; j ++){
-			cublasStatus_t stat;
-//			stat = cublasSgemm(getHandle(), CUBLAS_OP_N, CUBLAS_OP_N, src2.cols(),
-//					src1.rows(), src2.rows(), &alpha, src2.data->getDev()[i*src2.area3D() + j*src2.area2D()], src2.cols(),
-//					src1.data->getDev()[i*src1.area3D() + j*src1.area2D()], src1.cols(), &beta, 
-//					dst.data->getDev()[i*dst.area3D() + j*dst.area2D()], dst.cols());
-			float* s1 = src1.data->getDev() + i*src1.area3D() + j*src1.area2D();
-			float* s2 = src2.data->getDev() + i*src2.area3D() + j*src2.area2D();
-			float* d =  dst.data->getDev() + i*dst.area3D() + j*dst.area2D();
-			stat = cublasSgemm(getHandle(), CUBLAS_OP_N, CUBLAS_OP_N, src2.cols(),
-					src1.rows(), src2.rows(), &alpha, s2, src2.cols(),
-					s1, src1.cols(), &beta, 
-					d, dst.cols());
-			if (stat != CUBLAS_STATUS_SUCCESS) {
-				printf("cuMatrix::Mul() error\n");
-				exit(0);
+	unsigned size = dst.sizes() * dst.ts() * dst.ts();	
+	if(Devices::instance()->availableMemory < size * 1.3){
+		for(int i = 0 ; i < src1.ts() ; i ++){
+			for(int j = 0 ; j < src1.channals() ; j ++){
+				cublasStatus_t stat;
+				float* s1 = src1.data->getDev() + i*src1.area3D() + j*src1.area2D();
+				float* s2 = src2.data->getDev() + i*src2.area3D() + j*src2.area2D();
+				float* d =  dst.data->getDev() + i*dst.area3D() + j*dst.area2D();
+				stat = cublasSgemm(getHandle(), CUBLAS_OP_N, CUBLAS_OP_N, src2.cols(),
+						src1.rows(), src2.rows(), &alpha, s2, src2.cols(),
+						s1, src1.cols(), &beta, 
+						d, dst.cols());
+				if (stat != CUBLAS_STATUS_SUCCESS) {
+					printf("cuMatrix::Mul() error\n");
+					exit(0);
+				}
 			}
 		}
+		getLastCudaError("cuMatrix4d_matMul");
 	}
-	getLastCudaError("cuMatrix4d_matMul");
+	else{
+//		cuMatrix tmpRes;	
+//		if (cuMatrix::tmpMemory.find(size) != cuMatrix::tmpMemory.end()) {
+//			tmpRes = cuMatrix(cuMatrix::tmpMemory[size], dst.channals() * dst.ts() * dst.rows(),dst.channals() * dst.ts() * dst.cols());
+//		} else{ 
+//			tmpRes = cuMatrix(dst.channals() * dst.ts() * dst.rows(),dst.channals() * dst.ts() * dst.cols());
+//			cuMatrix::tmpMemory[size] = tmpRes.data;
+//		}
+//		cuMatrix tmpSrc2;	
+//		if (cuMatrix::tmpMemory.find(src2.sizes()) != cuMatrix::tmpMemory.end()) {
+//			tmpSrc2 = cuMatrix(cuMatrix::tmpMemory[size], src2.rows(),src2.channals() * src2.ts() * src2.cols());
+//		} else{ 
+//			tmpSrc2 = cuMatrix(src2.rows(),src2.channals() * src2.ts() * src2.cols());
+//			cuMatrix::tmpMemory[src2.sizes()] = tmpSrc2.data;
+//		}
+//		
+//		cublasStatus_t stat;
+//		float* s1 = src1.data->getDev()
+//		float* s2 = src2.data->getDev() + i*src2.area3D() + j*src2.area2D();
+//		float* d =  dst.data->getDev() + i*dst.area3D() + j*dst.area2D();
+//		stat = cublasSgemm(getHandle(), CUBLAS_OP_N, CUBLAS_OP_N, src2.cols(),
+//				src1.rows(), src2.rows(), &alpha, s2, src2.cols(),
+//				s1, src1.cols(), &beta, 
+//				d, dst.cols());
+//		if (stat != CUBLAS_STATUS_SUCCESS) {
+//			printf("cuMatrix::Mul() error\n");
+//			exit(0);
+//		}
+
+
+	}	
 }
 
+//blockIdx.x .y .z = src.rows(),src.channals(), src.ts()
+//threadIdx.x = src.cols().
+__global__ void RTkernel(float *src, float *dst, int a3, int a2 , int col){
+	int x = blockIdx.x;
+	int y = threadIdx.x;
+	int ch = blockIdx.y;
+	int ts = blockIdx.z;
+	while(y < col){
+		int offset = ts*a3 + ch*a2 + y * gridDim.x + x;
+		int i = offset / gridDim.x;
+		int j = offset % gridDim.x;	
+		dst[j * gridDim.z * gridDim.y * blockDim.x + i] = src[ts*a3 + ch*a2 + x*blockDim.x + y];
+		y += blockDim.x;
+	}
+}
 
+void cuMatrix4dRightTrans(cuMatrix4d& src,cuMatrix& dst){
+	assert(src.sizes() == dst.sizes());
+	int threadnum = maxThreadNum > src.cols() ? src.cols() : maxThreadNum;
+	RTkernel<<<dim3(src.rows(),src.channals(),src.ts()),dim3(threadnum)>>>(src.getDev(), dst.getDev(), src.area3D(), src.area2D(), src.cols());	
+	checkCudaErrors(cudaStreamSynchronize(0));
+	getLastCudaError("cuMatrix4d_RT");
+}
