@@ -1,5 +1,5 @@
 #include "cuMath.h"
-static int MAX_THREADNUM = Devices::instance()->max_ThreadsPerBlock();
+static int MAX_THREADNUM = Devices::instance()->maxThreadNum();
 __global__ void ReLU_kernel(float* src, float* dst, int rows, int cols,
 		int maxt) {
 	int x = blockIdx.x;

@@ -178,8 +178,8 @@ void set_label(int* label, int size, bool flag) {
 	int num = size;
 	checkCudaErrors(cudaMalloc((void** )&dev_label, sizeof(int) * num));
 	int threadnum =
-			Devices::instance()->max_ThreadsPerBlock() > num ?
-					num : Devices::instance()->max_ThreadsPerBlock();
+			Devices::instance()->maxThreadNum() > num ?
+					num : Devices::instance()->maxThreadNum();
 	int blocknum = num / threadnum + 1;
 	dim3 blocks(blocknum);
 	dim3 threads(threadnum);

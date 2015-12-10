@@ -1,6 +1,6 @@
 #include "cuMatrix.h"
 
-static int MAX_THREADNUM = Devices::instance()->max_ThreadsPerBlock();
+static int MAX_THREADNUM = Devices::instance()->maxThreadNum();
 //map<int, shared_ptr<MatData> > cuMatrix::TmpMemory;
 
 //cublasHandle_t& getHandle() {

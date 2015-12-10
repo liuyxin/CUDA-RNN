@@ -11,9 +11,16 @@ using namespace std;
 class MatData {
 public:
 	MatData(int r = 0, int c = 0) {
-//		rows = r;
-//		cols = c;
 		size = r * c * sizeof(float);
+		host = NULL;
+		if (size == 0) {
+			dev = NULL;
+		} else {
+			Malloc__();
+		}
+	}
+	MatData(int r , int c ,int ch ,int t) {
+		size = r * c * ch * t * sizeof(float);
 		host = NULL;
 		if (size == 0) {
 			dev = NULL;
