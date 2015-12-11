@@ -75,15 +75,17 @@ void PrintLayerConfigs(SoftMax& SMR) {
 //	trainNetwork(Hiddenlayers,SMR,re_word.size());
 //	return 0;
 //}
-//int main(){
-//	Devices::instance();
-//	printf("available = %llu\n",Devices::instance()->getAvailableMemory());
-//	cuMatrix4d mat(3,2,3,3);
-//	init32(mat);
-//	mat.printMat();
-//	cuMatrix res(3,18);
-//	cuMatrix4dRightTrans(mat,res);
-//	printf("\n\n");
-//	res.printMat();
-//	return 0;
-//}
+int main(){
+	cuMatrix4d mat(3,2,3,3);
+	cuMatrix4d mat2(2,3,3,3);
+	init32(mat);
+	init23(mat2);
+	mat.printMat();
+	printf("\n");
+	mat2.printMat();
+	cuMatrix4d res(2,2,3,3);
+	printf("\n\n");
+	cuMatrix4d_matMul(mat2,mat,res);
+	res.printMat();
+	return 0;
+}
