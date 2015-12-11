@@ -130,5 +130,5 @@ void cuMatrix4d_matMul(cuMatrix4d& src1,cuMatrix4d& src2, cuMatrix4d& dst);
 void cuMatrix4d_eleMul(cuMatrix4d& src1,cuMatrix4d& src2, cuMatrix4d& dst);	
 
 void cuMatrix4dRightTrans(cuMatrix4d& src,cuMatrix& dst);
-
+void extractMatrix(cuMatrix& src,cuMatrix4d& dst);
 #endif

@@ -126,12 +126,12 @@ class Devices {
 		cudaDeviceProp get_prop(){
 			return prop;
 		}
+		unsigned long long availableMemory;
 	private:
 		cudaDeviceProp prop;
 		nvmlDevice_t device;
 		unsigned int count;
 		unsigned int chosenDev;
-		unsigned long long availableMemory;
 };
 
 

@@ -13,6 +13,7 @@
 #include "LayerInit.h"
 #include "InputInit.h"
 #include "TrainNetwork.h"
+#include "test.h"
 using namespace std;
 void PrintLayerConfigs(SoftMax& SMR) {
 	cout
@@ -74,8 +75,15 @@ void PrintLayerConfigs(SoftMax& SMR) {
 //	trainNetwork(Hiddenlayers,SMR,re_word.size());
 //	return 0;
 //}
-int main(){
-	Devices::instance();
-	printf("available = %llu\n",Devices::instance()->getAvailableMemory());
-	return 0;
-}
+//int main(){
+//	Devices::instance();
+//	printf("available = %llu\n",Devices::instance()->getAvailableMemory());
+//	cuMatrix4d mat(3,2,3,3);
+//	init32(mat);
+//	mat.printMat();
+//	cuMatrix res(3,18);
+//	cuMatrix4dRightTrans(mat,res);
+//	printf("\n\n");
+//	res.printMat();
+//	return 0;
+//}

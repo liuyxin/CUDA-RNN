@@ -39,7 +39,7 @@ public:
 //		static map<int,shared_ptr<MatData> > TmpMemory;
 //		return TmpMemory;
 //	}
-	static map<int, shared_ptr<MatData>> tmpMemory;
+	static std::map<unsigned int, shared_ptr<MatData>> tmpMemory;
 	shared_ptr<MatData> data;
 	int rows() {
 		return row;

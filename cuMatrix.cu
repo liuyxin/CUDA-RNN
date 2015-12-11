@@ -15,7 +15,7 @@ static int MAX_THREADNUM = Devices::instance()->maxThreadNum();
 //	}
 //	return handle;
 //}
-map<int, shared_ptr<MatData>> cuMatrix::tmpMemory;
+std::map<unsigned int, shared_ptr<MatData>> cuMatrix::tmpMemory;
 __global__ void add_kernel(float* dev_x, float* dev_y, float* dev_z, int cols,
 		int maxt) {
 	int x = blockIdx.x;
