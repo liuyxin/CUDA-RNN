@@ -68,7 +68,7 @@ void cuMatrix4d_matMul(cuMatrix4d& src1,cuMatrix4d& src2, cuMatrix4d& dst)
 	assert(src1.ts() == src2.ts() && src1.ts() == dst.ts());
 	float alpha = 1.0;
 	float beta = 0.0;
-	unsigned size = dst.sizes() * dst.ts() * dst.ts();	
+	unsigned size = dst.sizes() * dst.ts() * dst.channals();	
 	if(Devices::instance()->availableMemory < size * 1.3){
 		for(int i = 0 ; i < src1.ts() ; i ++){
 			for(int j = 0 ; j < src1.channals() ; j ++){
@@ -81,7 +81,7 @@ void cuMatrix4d_matMul(cuMatrix4d& src1,cuMatrix4d& src2, cuMatrix4d& dst)
 						s1, src1.cols(), &beta, 
 						d, dst.cols());
 				if (stat != CUBLAS_STATUS_SUCCESS) {
-					printf("cuMatrix::Mul() error\n");
+					printf("cuMatrix4d_matMul(cuMatrix4d& src1, cuMatrix4d& src2, cuMatrix4d& dst) error\n");
 					exit(0);
 				}
 			}
@@ -98,7 +98,7 @@ void cuMatrix4d_matMul(cuMatrix4d& src1,cuMatrix4d& src2, cuMatrix4d& dst)
 		}
 		cuMatrix tmpSrc2;	
 		if (cuMatrix::tmpMemory.find(src2.sizes()) != cuMatrix::tmpMemory.end()) {
-			tmpSrc2 = cuMatrix(cuMatrix::tmpMemory[size], src2.rows(),src2.channals() * src2.ts() * src2.cols());
+			tmpSrc2 = cuMatrix(cuMatrix::tmpMemory[src2.sizes()], src2.rows(),src2.channals() * src2.ts() * src2.cols());
 		} else{ 
 			tmpSrc2 = cuMatrix(src2.rows(),src2.channals() * src2.ts() * src2.cols());
 			cuMatrix::tmpMemory[src2.sizes()] = tmpSrc2.data;
@@ -119,6 +119,87 @@ void cuMatrix4d_matMul(cuMatrix4d& src1,cuMatrix4d& src2, cuMatrix4d& dst)
 		}
 		extractMatrix(tmpRes,dst);	
 	}	
+}
+
+
+__global__ void extMatrixKernel(float* src, float* dst, int area2D, int col){
+	int x = blockIdx.x;
+	int y = threadIdx.x;
+	int z = blockIdx.y;
+	int tmp1 = area2D * gridDim.y;
+	int tmp2 = col * gridDim.y;
+	while(y < col){
+		dst[area2D*z + x*col + y] = src[(tmp1+col)*z + x*tmp2 + y];	
+		y += blockDim.x;
+	}
+}
+
+void extractMatrix(cuMatrix& src,cuMatrix4d& dst){
+	assert(src.rows() == dst.rows()*dst.channals()*dst.ts() && src.cols() == dst.cols() * dst.channals() * dst.ts());
+	int threadnum = maxThreadNum > dst.cols() ? dst.cols() : maxThreadNum;
+	extMatrixKernel<<<dim3(dst.rows(),dst.channals()*dst.ts()),dim3(threadnum)>>>(src.getDev(), dst.getDev(), dst.area2D(), dst.cols());	
+	checkCudaErrors(cudaStreamSynchronize(0));
+	getLastCudaError("extractMatrix");
+}
+
+void cuMatrix4d_matMul(cuMatrix& src1, cuMatrix4d& src2, cuMatrix4d& dst){
+	assert(src1.cols() == src2.rows());
+	assert(src1.rows() == dst.rows() && dst.cols() ==src2.cols());	
+	assert(src2.ts() == dst.ts() && src2.channals() == dst.channals());
+	unsigned size = dst.sizes() ;	
+	float alpha = 1.0;
+	float beta = 0.0;
+	if(Devices::instance()->availableMemory < size * 1.3){
+		for(int i = 0 ; i < src2.ts() ; i ++){
+			for(int j = 0 ; j < src2.channals() ; j ++){
+				cublasStatus_t stat;
+				float* s1 = src1.data->getDev();
+				float* s2 = src2.data->getDev() + i*src2.area3D() + j*src2.area2D();
+				float* d =  dst.data->getDev() + i*dst.area3D() + j*dst.area2D();
+				stat = cublasSgemm(getHandle(), CUBLAS_OP_N, CUBLAS_OP_N, src2.cols(),
+						src1.rows(), src2.rows(), &alpha, s2, src2.cols(),
+						s1, src1.cols(), &beta, 
+						d, dst.cols());
+				if (stat != CUBLAS_STATUS_SUCCESS) {
+					printf("cuMatrix4d_matMul(cuMatrix& src1, cuMatrix4d& src2, cuMatrix4d& dst) error\n");
+					exit(0);
+				}
+			}
+		}
+		getLastCudaError("cuMatrix4d_matMul(cuMatrix& src1, cuMatrix4d& src2, cuMatrix4d& dst)");
+	}else{
+		
+		cuMatrix tmpRes;	
+		if (cuMatrix::tmpMemory.find(size) != cuMatrix::tmpMemory.end()) {
+			tmpRes = cuMatrix(cuMatrix::tmpMemory[size], dst.rows(),dst.channals() * dst.ts() * dst.cols());
+		} else{ 
+			tmpRes = cuMatrix(dst.rows(),dst.channals() * dst.ts() * dst.cols());
+			cuMatrix::tmpMemory[size] = tmpRes.data;
+		}
+		cuMatrix tmpSrc2;	
+		if (cuMatrix::tmpMemory.find(src2.sizes()) != cuMatrix::tmpMemory.end()) {
+			tmpSrc2 = cuMatrix(cuMatrix::tmpMemory[src2.sizes()], src2.rows(),src2.channals() * src2.ts() * src2.cols());
+		} else{ 
+			tmpSrc2 = cuMatrix(src2.rows(),src2.channals() * src2.ts() * src2.cols());
+			cuMatrix::tmpMemory[src2.sizes()] = tmpSrc2.data;
+		}
+		cuMatrix4dRightTrans(src2,tmpSrc2);
+
+		cublasStatus_t stat;
+		float* s1 = src1.getDev();
+		float* s2 = tmpSrc2.getDev();
+		float* d =  tmpRes.getDev();
+		stat = cublasSgemm(getHandle(), CUBLAS_OP_N, CUBLAS_OP_N, tmpSrc2.cols(),
+				src1.rows() , tmpSrc2.rows(), &alpha, s2, tmpSrc2.cols(),
+				s1, src1.cols(), &beta, 
+				d, tmpRes.cols());
+		if (stat != CUBLAS_STATUS_SUCCESS) {
+			printf("cuMatrix::Mul() error\n");
+			exit(0);
+		}
+ 		cuMatrix4dRightInverseTrans(tmpRes,dst);
+	}
+
 }
 
 //blockIdx.x .y .z = src.rows(),src.channals(), src.ts()
@@ -145,23 +226,25 @@ void cuMatrix4dRightTrans(cuMatrix4d& src,cuMatrix& dst){
 	getLastCudaError("cuMatrix4d_RT");
 }
 
-__global__ void extMatrixKernel(float* src, float* dst, int area2D, int col){
+__global__ void RTinverseKernel(float* src, float* dst,int a2, int col){
 	int x = blockIdx.x;
 	int y = threadIdx.x;
 	int z = blockIdx.y;
-	int tmp1 = area2D * gridDim.y;
-	int tmp2 = col * gridDim.y;
 	while(y < col){
-		dst[area2D*z + x*col + y] = src[(tmp1+col)*z + x*tmp2 + y];	
-		y += blockDim.x;
+		int offset = (z*col + y)*gridDim.x + x;
+		int k = offset/a2;
+		int tmp = offset%a2;
+		int i = tmp/gridDim.x;
+		int j = tmp%gridDim.x;
+		dst[k*a2 + j * col + i] = src[x * col * gridDim.y + z * col + y];
+		y+=blockDim.x;
 	}
 }
 
-void extractMatrix(cuMatrix& src,cuMatrix4d& dst){
-	assert(src.rows() == dst.rows()*dst.channals()*dst.ts() && src.cols() == dst.cols() * dst.channals() * dst.ts());
+void cuMatrix4dRightInverseTrans(cuMatrix&src,cuMatrix4d& dst){
+	assert(src.rows() == dst.rows() && src.cols() == dst.cols()*dst.channals()*dst.ts());	
 	int threadnum = maxThreadNum > dst.cols() ? dst.cols() : maxThreadNum;
-	extMatrixKernel<<<dim3(dst.rows(),dst.channals()*dst.ts()),dim3(threadnum)>>>(src.getDev(), dst.getDev(), dst.area2D(), dst.cols());	
+	RTinverseKernel<<<dim3(dst.rows(),dst.channals()*dst.ts()),dim3(threadnum)>>>(src.getDev(),dst.getDev(),dst.area2D(),dst.cols());
 	checkCudaErrors(cudaStreamSynchronize(0));
-	getLastCudaError("extractMatrix");
+	getLastCudaError("cuMatrix4d_RTinverse");
 }
-
