@@ -112,6 +112,10 @@ class cuMatrix4d {
 			delete [] f[1];
 			delete [] f[0];
 		}
+		void t();
+		float& getSum();
+		cuMatrix4d Mul(cuMatrix4d m);
+
 	private:
 		int row;
 		int col;
@@ -120,17 +124,21 @@ class cuMatrix4d {
 		int area2;
 		int area3;
 		int len_;
+		float sum;
 		unsigned int size;
 };
 cublasHandle_t& getHandle();
 void cuMatrix4d_Add(cuMatrix4d& src1,cuMatrix4d& src2, cuMatrix4d& dst);	
 //dst = src1 * src2;
 void cuMatrix4d_matMul(cuMatrix4d& src1,cuMatrix4d& src2, cuMatrix4d& dst);	
-void cuMatrix4d_matMul(cuMatrix& src1, cuMatrix4d& src2, cuMatrix4d& dst);
+void cuMatrix4d_matMul(cuMatrix src1, cuMatrix4d& src2, cuMatrix4d& dst);
 //dst = src1.Mul(src2);
 void cuMatrix4d_eleMul(cuMatrix4d& src1,cuMatrix4d& src2, cuMatrix4d& dst);	
 void cuMatrix4dRightTrans(cuMatrix4d& src,cuMatrix& dst);
 void cuMatrix4dRightInverseTrans(cuMatrix&src,cuMatrix4d& dst);
 void extractMatrix(cuMatrix& src,cuMatrix4d& dst);
+
+//cuMatrix4d math
+void square(cuMatrix4d& src,cuMatrix4d& dst);
 
 #endif

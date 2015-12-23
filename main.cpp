@@ -40,52 +40,62 @@ void PrintLayerConfigs(SoftMax& SMR) {
 
 //cout << "wordmap.size()     :" << wordmap.size() << endl
 //		<< "re_wordmap.size()  :" << re_word.size() << endl;
-//int main() {
-//	getDevicesinfo();
-//	vector<vector<singleWord> > traindata;
-//	vector<vector<singleWord> > testdata;
-//	vector<string> re_label;
-//	map<string, int> labelmap;
-//	map<string, int> wordmap;
-//	vector<string> re_word;
-//	vector<HiddenLayer> Hiddenlayers;
-//	SoftMax SMR;
-//	Config::instance()->init("config.txt", SMR);
-//	readdata("dataset/news_tagged_data.txt", traindata, testdata, re_label,
-//			labelmap);
-//	removeNumber(traindata);
-//
-//	getWordMap(traindata, wordmap, re_word);
-//	vector<vector<int> > trainX;
-//	vector<vector<int> > trainY;
-//	vector<vector<int> > testX;
-//	vector<vector<int> > testY;
-//	resolutioner(traindata, trainX, trainY, wordmap);
-//	resolutioner(testdata, testX, testY, wordmap);
-//	Config::instance()->set_word_num(re_word.size());
-//	Config::instance()->set_trainX_num(trainX.size());
-//	Config::instance()->set_testX_num(testX.size());
-//	cout<< Config::instance()->get_wordNum()<<endl
-//		<<Config::instance()->trainXNum()<<endl
-//		<<Config::instance()->testXNum()<<endl;
-//	init_HLandSMR(Config::instance()->HiddenConfigs, Hiddenlayers, SMR,
-//			re_word.size());
-//
-//	Data2GPU(trainX, trainY, testX, testY);
-//	trainNetwork(Hiddenlayers,SMR,re_word.size());
-//	return 0;
-//}
+int main() {
+	vector<vector<singleWord> > traindata;
+	vector<vector<singleWord> > testdata;
+	vector<string> re_label;
+	map<string, int> labelmap;
+	map<string, int> wordmap;
+	vector<string> re_word;
+	vector<HiddenLayer> Hiddenlayers;
+	SoftMax SMR;
+	Config::instance()->init("config.txt", SMR);
+	readdata("dataset/news_tagged_data.txt", traindata, testdata, re_label,
+			labelmap);
+	removeNumber(traindata);
+
+	getWordMap(traindata, wordmap, re_word);
+	vector<vector<int> > trainX;
+	vector<vector<int> > trainY;
+	vector<vector<int> > testX;
+	vector<vector<int> > testY;
+	resolutioner(traindata, trainX, trainY, wordmap);
+	resolutioner(testdata, testX, testY, wordmap);
+	Config::instance()->set_word_num(re_word.size());
+	Config::instance()->set_trainX_num(trainX.size());
+	Config::instance()->set_testX_num(testX.size());
+	cout<< Config::instance()->get_wordNum()<<endl
+		<<Config::instance()->trainXNum()<<endl
+		<<Config::instance()->testXNum()<<endl;
+	init_HLandSMR(Config::instance()->HiddenConfigs, Hiddenlayers, SMR,
+			re_word.size());
+
+	Data2GPU(trainX, trainY, testX, testY);
+	trainNetwork(Hiddenlayers,SMR,re_word.size());
+	return 0;
+}
 int main(){
-	cuMatrix4d mat(3,2,3,3);
-	cuMatrix4d mat2(2,3,3,3);
-	init32(mat);
-	init23(mat2);
-	mat.printMat();
-	printf("\n");
-	mat2.printMat();
-	cuMatrix4d res(2,2,3,3);
-	printf("\n\n");
-	cuMatrix4d_matMul(mat2,mat,res);
-	res.printMat();
+//	cuMatrix4d mat(3,2,2,3);
+//	cuMatrix4d mat2(2,3,2,3);
+//	init32(mat);
+//	init23(mat2);
+//	mat.printMat();
+//	printf("\n");
+//	mat2.printMat();
+//	cuMatrix4d res(2,2,2,3);
+//	printf("\n\n");
+//	cuMatrix4d_matMul(mat2,mat,res);
+//	res.printMat();
+//	cuMatrix mat23;
+//	init23(mat23);
+//	cuMatrix4d mat(3,2,2,3);
+//	init32(mat);
+//	mat23.printMat();
+//	printf("\n\n");
+//	mat.printMat();	
+//	cuMatrix4d res(2,2,2,3);
+//	cuMatrix4d_matMul(mat23,mat,res);
+//	printf("\n\n");
+//	res.printMat();
 	return 0;
 }

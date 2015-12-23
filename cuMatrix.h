@@ -65,18 +65,6 @@ public:
 			printf("\n");
 		}
 	}
-	float getSum() {
-		data->toCpu();
-		float sum = 0;
-		float *tmp = getHost();
-		for (int i = 0; i < rows(); i++) {
-			for (int j = 0; j < cols(); j++) {
-				sum += tmp[i * cols() + j];
-			}
-		}
-		return sum;
-
-	}
 	void copyTo(cuMatrix dst, cudaStream_t stream1 = 0) {
 		if (cols() != dst.cols() || rows() != dst.rows()) {
 			printf("cuMatrix::copyTo() size error\n");
@@ -111,12 +99,15 @@ public:
 	void Square2(cuMatrix& cumat);
 	void Mul2(cuMatrix cumat,cuMatrix& dst);
 	void Mul2(float i ,cuMatrix& dst);
+	float& getSum();
 	friend cuMatrix operator /(float i, cuMatrix cumat);
+	
 private:
+	int sum;
 	int row;
 	int col;
 	int size;
 };
-//cublasHandle_t& getHandle();
+cublasHandle_t& getHandle();
 
 #endif
