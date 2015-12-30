@@ -156,9 +156,9 @@ cuMatrix4d Log(cuMatrix4d& src) {
 	cuMatrix4d res;
 	int size = src.sizes();
 	if (cuMatrix::tmpMemory.find(size) != cuMatrix::tmpMemory.end()) {
-		res = cuMatrix4d(cuMatrix::tmpMemory[size], src.rows(), src.cols(),src.channals(),src.rows());
+		res = cuMatrix4d(cuMatrix::tmpMemory[size], src.rows(), src.cols(),src.channals(),src.ts());
 	} else {
-		res = cuMatrix4d(src.rows(), src.cols(),src.channals(),src.rows());
+		res = cuMatrix4d(src.rows(), src.cols(),src.channals(),src.ts());
 		cuMatrix::tmpMemory[size] = res.data;
 	}
 	int threadnum = MAX_THREADNUM > src.cols() ? src.cols() : MAX_THREADNUM;

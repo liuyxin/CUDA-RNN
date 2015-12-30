@@ -22,6 +22,7 @@ void costParamentInit(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR) {
 	c = Config::instance()->get_batch_size();
 	acti_l2[0] = cuMatrix4d(r,c,1,Config::instance()->get_ngram());
 	acti_r2[0] = cuMatrix4d(r,c,1,Config::instance()->get_ngram());
+	acti2_sum[0] = cuMatrix4d(r,c,1,Config::instance()->get_ngram());
 	//	acti_l[0] = cuMatrix4d(r,c,1,Config::instance()->get_ngram());
 	//	acti_r[0] = cuMatrix4d(r,c,1,Config::instance()->get_ngram());
 	for(int i = 1 ; i <= HiddenNum ; i ++){	
@@ -72,6 +73,7 @@ void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
 	acti_sum[0] = acti_0;
 	square(acti_0,acti_l2[0]);
 	square(acti_0,acti_r2[0]);
+	square(acti_0,acti2_sum[0]);
 	//hiddenlayer forward;
 	for (int i = 1; i <= HiddenNum; i++) {
 		if (Config::instance()->HiddenConfigs[i - 1].get_DropoutRate()< 1.0) {
@@ -125,9 +127,7 @@ void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
 	cuDec(p, groundTruth, dis);
 	square(dis,dis2);
 	//Smr t-forward
-	
 	smrBP(SMR, acti_l[acti_l.size()-1], acti_r[acti_r.size()-1],acti_l2[acti_l2.size()-1] ,acti_r2[acti_r2.size()-1] , dis, dis2,nSamples);
-	
 	//BPTT for last hidden
 	//get delta
 	cuMatrix4d_matMul(SMR.W_l.t(),dis,delta_l[delta_l.size()-1]);
@@ -140,7 +140,6 @@ void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
 	cuMatrix4d_matMul(Pow(SMR.W_r.t(),2),dis2,delta_rd2[delta_rd2.size()-1]);
         hiddenBPTT(delta_rd2[delta_rd2.size() - 1], Pow(Hiddenlayers[Hiddenlayers.size() - 1].W_r.t(),2), nonlin_r[nonlin_r.size() - 1], bernoulli_r[bernoulli_r.size() - 1], TIMEBACKWARD);
 	
-
 	for (int i = delta_l.size() - 2; i > 0; i--){
 		cuMatrix4d_matMul(Hiddenlayers[i].U_l.t(), delta_l[i + 1],delta_l[i]);
 		hiddenBPTT(delta_l[i], Hiddenlayers[i-1].W_l.t(),nonlin_l[i],bernoulli_l[i],TIMEFORWARD);

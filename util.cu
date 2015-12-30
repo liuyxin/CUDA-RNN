@@ -158,6 +158,7 @@ __global__ void getSmrgrad(float* src,  float* dst, int cols, int ts, int a2){
 			d = d + a2;
 			s = s + a2;		
 		}
+		y += blockDim.x;
 	}
 }
 __global__ void getSmrd2(float* src,  float* dst, int cols, int ts,int a2) {
@@ -174,6 +175,7 @@ __global__ void getSmrd2(float* src,  float* dst, int cols, int ts,int a2) {
 			d = d + a2;
 			s = s + a2;		
 		}
+		y += blockDim.x;
 	}
 }
 
@@ -186,8 +188,8 @@ void smrBP(SoftMax& smr, cuMatrix4d& acti_l,cuMatrix4d& acti_r,cuMatrix4d& acti_
 		tmpRes = cuMatrix4d(smr.W_l.rows(), smr.W_l.cols(), dis.channals(), dis.ts());
 		cuMatrix::tmpMemory[tmpSize] = tmpRes.data;
 	}
-	int threadnum = MAX_THREADNUM > tmpRes.cols() ? tmpRes.cols() : MAX_THREADNUM;
 	cuMatrix4d_matMul(dis, acti_l.t(), tmpRes);
+	int threadnum = MAX_THREADNUM > tmpRes.cols() ? tmpRes.cols() : MAX_THREADNUM;
 	getSmrgrad<<<dim3(tmpRes.rows()),dim3(threadnum)>>>(tmpRes.getDev(),smr.W_lgrad.getDev(),tmpRes.cols(),tmpRes.ts(),tmpRes.area2D());	
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("smrBP: getSmrlgrad");

@@ -81,12 +81,9 @@ void trainNetwork(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR,
 			}
 			cout << "epoch: " << epo << ", iter: " << k << ": ";
 			init_acti0(acti_0, sampleY);
-
 			getNetworkCost(acti_0, sampleY, Hiddenlayers, SMR);
-
 			smrW_ld2.Mul2(Momentum_d2, smrW_ld2);
 			smrW_ld2 += SMR.W_ld2 * (1.0 - Momentum_d2);
-
 			cuDiv(SMR.lr_W, (smrW_ld2 + mu), smr_lr_W);
 
 			v_smr_W_l.Mul2(Momentum_w, v_smr_W_l);
