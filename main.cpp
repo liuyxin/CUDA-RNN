@@ -74,7 +74,7 @@ int main() {
 	trainNetwork(Hiddenlayers,SMR,re_word.size());
 	return 0;
 }
-int main(){
+//int main(){
 //	cuMatrix4d mat(3,2,2,3);
 //	cuMatrix4d mat2(2,3,2,3);
 //	init32(mat);
@@ -97,5 +97,5 @@ int main(){
 //	cuMatrix4d_matMul(mat23,mat,res);
 //	printf("\n\n");
 //	res.printMat();
-	return 0;
-}
+//	return 0;
+//}

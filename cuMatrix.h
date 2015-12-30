@@ -103,7 +103,7 @@ public:
 	friend cuMatrix operator /(float i, cuMatrix cumat);
 	
 private:
-	int sum;
+	float sum;
 	int row;
 	int col;
 	int size;

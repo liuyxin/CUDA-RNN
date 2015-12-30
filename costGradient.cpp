@@ -28,7 +28,7 @@ void costParamentInit(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR) {
 		r = Hiddenlayers[i - 1].U_l.rows();
 		c = i == 1 ?
 			Config::instance()->get_batch_size() :
-			acti_l[i - 1][0].cols();
+			acti_l[i - 1].cols();
 		acti_l[i] = cuMatrix4d(r, c, 1, Config::instance()->get_ngram());
 		acti_r[i] = cuMatrix4d(r, c, 1, Config::instance()->get_ngram());
 		acti_l2[i] = cuMatrix4d(r, c, 1, Config::instance()->get_ngram());
@@ -46,15 +46,15 @@ void costParamentInit(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR) {
 	dis = cuMatrix4d(SMR.get_NumClasses(),acti_l[acti_l.size() - 1].cols(),1,Config::instance()->get_ngram());
 	dis2 = cuMatrix4d(SMR.get_NumClasses(),acti_l[acti_l.size() - 1].cols(),1,Config::instance()->get_ngram());
 
-	delta_l[delta_l.size() - 1] = cuMatrix4d(SMR.W_l.cols(),dis[0].cols(),1,Config::instance()->get_ngram());
-	delta_ld2[delta_l.size() - 1] = cuMatrix4d(SMR.W_l.cols(),dis[0].cols(),1,Config::instance()->get_ngram());
-	delta_r[delta_l.size() - 1] = cuMatrix4d(SMR.W_l.cols(),dis[0].cols(),1,Config::instance()->get_ngram());
-	delta_rd2[delta_l.size() - 1] = cuMatrix4d(SMR.W_l.cols(),dis[0].cols(),1,Config::instance()->get_ngram());
+	delta_l[delta_l.size() - 1] = cuMatrix4d(SMR.W_l.cols(),dis.cols(),1,Config::instance()->get_ngram());
+	delta_ld2[delta_l.size() - 1] = cuMatrix4d(SMR.W_l.cols(),dis.cols(),1,Config::instance()->get_ngram());
+	delta_r[delta_l.size() - 1] = cuMatrix4d(SMR.W_l.cols(),dis.cols(),1,Config::instance()->get_ngram());
+	delta_rd2[delta_l.size() - 1] = cuMatrix4d(SMR.W_l.cols(),dis.cols(),1,Config::instance()->get_ngram());
 	for (int i = delta_l.size() - 2 ; i > 0; i--) {
-		delta_l[i] = cuMatrix4d(Hiddenlayers[i].U_l.cols(), delta_l[i + 1][j].cols(), 1, Config::instance()->get_ngram());
-		delta_ld2[i] = cuMatrix4d(Hiddenlayers[i].U_l.cols(), delta_l[i + 1][j].cols(), 1, Config::instance()->get_ngram());
-		delta_r[i] = cuMatrix4d(Hiddenlayers[i].U_r.cols(), delta_r[i + 1][j].cols(), 1, Config::instance()->get_ngram());
-		delta_rd2[i] = cuMatrix4d(Hiddenlayers[i].U_r.cols(), delta_r[i + 1][j].cols(), 1, Config::instance()->get_ngram());
+		delta_l[i] = cuMatrix4d(Hiddenlayers[i].U_l.cols(), delta_l[i + 1].cols(), 1, Config::instance()->get_ngram());
+		delta_ld2[i] = cuMatrix4d(Hiddenlayers[i].U_l.cols(), delta_l[i + 1].cols(), 1, Config::instance()->get_ngram());
+		delta_r[i] = cuMatrix4d(Hiddenlayers[i].U_r.cols(), delta_r[i + 1].cols(), 1, Config::instance()->get_ngram());
+		delta_rd2[i] = cuMatrix4d(Hiddenlayers[i].U_r.cols(), delta_r[i + 1].cols(), 1, Config::instance()->get_ngram());
 	}
 	for(int i = 0 ; i < HiddenNum ; i ++){
 		creatBnl(bernoulli_l[i],1.0f);
@@ -87,8 +87,8 @@ void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
 		square(acti_r[i],acti_r2[i]);
 	
 		for (int i = 1; i < acti_r.size(); i++) {
-			cuMatrix4d_ADD(acti_r[i], acti_l[i], acti_sum[i]);
-			cuMatrix4d_ADD(acti_r2[i], acti_l2[i], acti2_sum[i]);
+			cuMatrix4d_Add(acti_r[i], acti_l[i], acti_sum[i]);
+			cuMatrix4d_Add(acti_r2[i], acti_l2[i], acti2_sum[i]);
 		}
 	}
 	// softmax layer forward
@@ -131,124 +131,35 @@ void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
 	//BPTT for last hidden
 	//get delta
 	cuMatrix4d_matMul(SMR.W_l.t(),dis,delta_l[delta_l.size()-1]);
-        hiddenBPTT(delta_l[delta_l.size() - 1], Hiddenlayer[Hiddenlayers.size() - 1].W_l.t(), nonlin_l[nonlin_l.size() - 1], bernoulli_l[bernoulli_l.size() - 1], TIMEFORWARD);
+        hiddenBPTT(delta_l[delta_l.size() - 1], Hiddenlayers[Hiddenlayers.size() - 1].W_l.t(), nonlin_l[nonlin_l.size() - 1], bernoulli_l[bernoulli_l.size() - 1], TIMEFORWARD);
 	cuMatrix4d_matMul(SMR.W_r.t(),dis,delta_r[delta_r.size()-1]);
-        hiddenBPTT(delta_r[delta_r.size() - 1], Hiddenlayer[Hiddenlayers.size() - 1].W_r.t(), nonlin_r[nonlin_r.size() - 1], bernoulli_r[bernoulli_r.size() - 1], TIMEBACKWARD);
+        hiddenBPTT(delta_r[delta_r.size() - 1], Hiddenlayers[Hiddenlayers.size() - 1].W_r.t(), nonlin_r[nonlin_r.size() - 1], bernoulli_r[bernoulli_r.size() - 1], TIMEBACKWARD);
 
 	cuMatrix4d_matMul(Pow(SMR.W_l.t(), 2),dis2,delta_ld2[delta_ld2.size()-1]);
-        hiddenBPTT(delta_ld2[delta_ld2.size() - 1], Pow(Hiddenlayer[Hiddenlayers.size() - 1].W_l.t(),2), nonlin_l[nonlin_l.size() - 1], bernoulli_l[bernoulli_l.size() - 1], TIMEFORWARD);
+        hiddenBPTT(delta_ld2[delta_ld2.size() - 1], Pow(Hiddenlayers[Hiddenlayers.size() - 1].W_l.t(),2), nonlin_l[nonlin_l.size() - 1], bernoulli_l[bernoulli_l.size() - 1], TIMEFORWARD);
 	cuMatrix4d_matMul(Pow(SMR.W_r.t(),2),dis2,delta_rd2[delta_rd2.size()-1]);
-        hiddenBPTT(delta_rd2[delta_rd2.size() - 1], Pow(Hiddenlayer[Hiddenlayers.size() - 1].W_r.t(),2), nonlin_r[nonlin_r.size() - 1], bernoulli_r[bernoulli_r.size() - 1], TIMEBACKWARD);
+        hiddenBPTT(delta_rd2[delta_rd2.size() - 1], Pow(Hiddenlayers[Hiddenlayers.size() - 1].W_r.t(),2), nonlin_r[nonlin_r.size() - 1], bernoulli_r[bernoulli_r.size() - 1], TIMEBACKWARD);
 	
 
 	for (int i = delta_l.size() - 2; i > 0; i--){
 		cuMatrix4d_matMul(Hiddenlayers[i].U_l.t(), delta_l[i + 1],delta_l[i]);
-		hiddenBPTT(delta_l[i], Hiddenlayer[i-1].W_l.t(),nonlin_l[i],bernoulli_l[i],TIMEFORWARD);
+		hiddenBPTT(delta_l[i], Hiddenlayers[i-1].W_l.t(),nonlin_l[i],bernoulli_l[i],TIMEFORWARD);
 		cuMatrix4d_matMul(Hiddenlayers[i].U_r.t(), delta_r[i + 1],delta_r[i]);
-		hiddenBPTT(delta_r[i], Hiddenlayer[i-1].W_r.t(),nonlin_r[i],bernoulli_r[i],TIMEBACKWARD);
+		hiddenBPTT(delta_r[i], Hiddenlayers[i-1].W_r.t(),nonlin_r[i],bernoulli_r[i],TIMEBACKWARD);
 
 
 		cuMatrix4d_matMul(Pow(Hiddenlayers[i].U_l.t(),2), delta_ld2[i + 1],delta_ld2[i]);
-		hiddenBPTT(delta_ld2[i], Pow(Hiddenlayer[i-1].W_l.t(),2),nonlin_l[i],bernoulli_l[i],TIMEFORWARD);
+		hiddenBPTT(delta_ld2[i], Pow(Hiddenlayers[i-1].W_l.t(),2),nonlin_l[i],bernoulli_l[i],TIMEFORWARD);
 		cuMatrix4d_matMul(Pow(Hiddenlayers[i].U_r.t(),2), delta_rd2[i + 1],delta_rd2[i]);
-		hiddenBPTT(delta_rd2[i], Pow(Hiddenlayer[i-1].W_r.t(),2),nonlin_r[i],bernoulli_r[i],TIMEBACKWARD);
+		hiddenBPTT(delta_rd2[i], Pow(Hiddenlayers[i-1].W_r.t(),2),nonlin_r[i],bernoulli_r[i],TIMEBACKWARD);
 	}	
 	//get grad
-	for (int i = HiddenNum - 1; i >= 0; i--) {
-		// forward part.
-		if (i == 0) {
-			cuMultiplication(delta_l[i + 1][0], acti_l[i][0].t(),
-					Hiddenlayers[i].U_lgrad);
-			cuMultiplication(delta_ld2[i + 1][0], acti_l2[i][0].t(),
-					Hiddenlayers[i].U_ld2);
-			for (int j = 1; j < T; ++j) {
-				Hiddenlayers[i].U_lgrad += delta_l[i + 1][j] * acti_l[i][j].t();
-				Hiddenlayers[i].U_ld2 += delta_ld2[i + 1][j]
-					* acti_l2[i][j].t();
-			}
-		} else {
-			cuMultiplication(delta_l[i + 1][0], acti_sum[i][0].t(),
-					Hiddenlayers[i].U_lgrad);
-			cuMultiplication(delta_ld2[i + 1][0], acti2_sum[i][0].t(),
-					Hiddenlayers[i].U_lgrad);
-			for (int j = 1; j < T; j++) {
-				Hiddenlayers[i].U_lgrad += delta_l[i + 1][j]
-					* acti_sum[i][j].t();
-				Hiddenlayers[i].U_ld2 += delta_ld2[i + 1][j]
-					* acti2_sum[i][j].t();
-			}
-		}
-		Hiddenlayers[i].U_lgrad /= nSamples;
-		Hiddenlayers[i].U_lgrad += Hiddenlayers[i].U_l
-			* Config::instance()->HiddenConfigs[i].get_WeightDecay();
-		Hiddenlayers[i].U_ld2 /= nSamples;
-		Hiddenlayers[i].U_ld2 +=
-			Config::instance()->HiddenConfigs[i].get_WeightDecay();
-
-		cuMultiplication(delta_l[i + 1][T - 1], acti_l[i + 1][T - 2].t(),
-				Hiddenlayers[i].W_lgrad);
-		cuMultiplication(delta_ld2[i + 1][T - 1], acti_l2[i + 1][T - 2].t(),
-				Hiddenlayers[i].W_ld2);
-		for (int j = T - 2; j > 0; j--) {
-			Hiddenlayers[i].W_lgrad += delta_l[i + 1][j]
-				* acti_l[i + 1][j - 1].t();
-			Hiddenlayers[i].W_ld2 += delta_ld2[i + 1][j]
-				* acti_l2[i + 1][j - 1].t();
-		}
-		Hiddenlayers[i].W_lgrad /= nSamples;
-		Hiddenlayers[i].W_lgrad += Hiddenlayers[i].W_l
-			* Config::instance()->HiddenConfigs[i].get_WeightDecay();
-		Hiddenlayers[i].W_ld2 /= nSamples;
-		Hiddenlayers[i].W_ld2 +=
-			Config::instance()->HiddenConfigs[i].get_WeightDecay();
-
-		// backward part.
-		if (i == 0) {
-			cuMultiplication(delta_r[i + 1][0], acti_r[i][0].t(),
-					Hiddenlayers[i].U_rgrad);
-			cuMultiplication(delta_rd2[i + 1][0], acti_r2[i][0].t(),
-					Hiddenlayers[i].U_rd2);
-			for (int j = 1; j < T; ++j) {
-				Hiddenlayers[i].U_rgrad += delta_r[i + 1][j] * acti_r[i][j].t();
-				Hiddenlayers[i].U_rd2 += delta_rd2[i + 1][j]
-					* acti_r2[i][j].t();
-			}
-		} else {
-			cuMultiplication(delta_r[i + 1][0], acti_sum[i][0].t(),
-					Hiddenlayers[i].U_rgrad);
-			cuMultiplication(delta_rd2[i + 1][0], acti2_sum[i][0].t(),
-					Hiddenlayers[i].U_rgrad);
-			for (int j = 1; j < T; j++) {
-				Hiddenlayers[i].U_rgrad += delta_r[i + 1][j]
-					* acti_sum[i][j].t();
-				Hiddenlayers[i].U_rd2 += delta_rd2[i + 1][j]
-					* acti2_sum[i][j].t();
-			}
-		}
-		Hiddenlayers[i].U_rgrad /= nSamples;
-		Hiddenlayers[i].U_rgrad += Hiddenlayers[i].U_r
-			* Config::instance()->HiddenConfigs[i].get_WeightDecay();
-		Hiddenlayers[i].U_rd2 /= nSamples;
-		Hiddenlayers[i].U_rd2 +=
-			Config::instance()->HiddenConfigs[i].get_WeightDecay();
-
-		cuMultiplication(delta_r[i + 1][0], acti_r[i + 1][1].t(),
-				Hiddenlayers[i].W_rgrad);
-		cuMultiplication(delta_rd2[i + 1][0], acti_r2[i + 1][1].t(),
-				Hiddenlayers[i].W_rd2);
-		for (int j = 1; j < T - 1; j++) {
-			Hiddenlayers[i].W_rgrad += delta_r[i + 1][j]
-				* acti_r[i + 1][j + 1].t();
-			Hiddenlayers[i].W_rd2 += delta_rd2[i + 1][j]
-				* acti_r2[i + 1][j + 1].t();
-		}
-		Hiddenlayers[i].W_rgrad /= nSamples;
-		Hiddenlayers[i].W_rgrad += Hiddenlayers[i].W_r
-			* Config::instance()->HiddenConfigs[i].get_WeightDecay();
-		Hiddenlayers[i].W_rd2 /= nSamples;
-		Hiddenlayers[i].W_rd2 +=
-			Config::instance()->HiddenConfigs[i].get_WeightDecay();
-	}
+	for (int i = HiddenNum - 1; i >= 0; i--){
+		hiddenGetUgrad(delta_l[i+1],delta_r[i+1],delta_ld2[i+1],delta_rd2[i+1],acti_sum[i],acti2_sum[i],Hiddenlayers[i],
+				Config::instance()->HiddenConfigs[i].get_WeightDecay());
+		hiddenGetWgrad(delta_l[i+1],delta_r[i+1],delta_ld2[i+1],delta_rd2[i+1],acti_l[i+1],acti_r[i+1],acti_l2[i+1],acti_r2[i+1],
+			      Hiddenlayers[i], Config::instance()->HiddenConfigs[i].get_WeightDecay());
+	} 
 	for (int x = 0; x < T; x++) {
 		cudaMemsetAsync(acti_0.getDev(), 0, acti_0.sizes(), 0);
 		cudaMemsetAsync(groundTruth.getDev(), 0, groundTruth.sizes(), 0);

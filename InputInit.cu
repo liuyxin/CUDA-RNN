@@ -7,16 +7,16 @@ __global__ void set_sampleY_kernel(float* sampleY, int* src, int* dev_ran,
 	sampleY[tid * cols + bid] = src[dev_ran[bid] * ngram + tid];
 }
 
-__global__ void set_acti0_kernel(float** acti0, int* src, int* dev_ran,
-		int cols, int ngram) {
+__global__ void set_acti0_kernel(float* acti0, int* src, int* dev_ran,
+		int cols, int ngram, int a2) {
 	int tid = threadIdx.x;
 	int bid = blockIdx.x;
-	float *p = acti0[tid];
+	float *p = acti0 + tid * a2;
 	int n = src[dev_ran[bid] * ngram + tid];
 	p[n * cols + bid] = 1;
 }
 
-void init_acti0(cuMatrixVector& acti_0, cuMatrix& sampleY) {
+void init_acti0(cuMatrix4d& acti_0, cuMatrix& sampleY) {
 	int bs = Config::instance()->get_batch_size();
 	int ngram = Config::instance()->get_ngram();
 	int *dev_ran = NULL;
@@ -32,8 +32,8 @@ void init_acti0(cuMatrixVector& acti_0, cuMatrix& sampleY) {
 	dim3 block = dim3(bs);
 
 	dim3 thread = dim3(ngram);
-	set_acti0_kernel<<<block, thread>>>(acti_0.get_devPoint(),
-			Samples::instance()->get_trainX(), dev_ran, bs, ngram);
+	set_acti0_kernel<<<block, thread>>>(acti_0.getDev(),
+			Samples::instance()->get_trainX(), dev_ran, bs, ngram, acti_0.area2D());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("set_acti0_kernel-2");
 	set_sampleY_kernel<<<block, thread,0,0>>>(sampleY.getDev(),
@@ -48,9 +48,7 @@ __global__ void set_gt_kernel(float* gt_, float* y , int a2) {
 	int bid = blockIdx.x;
 	int z = blockIdx.y;
 	int cols = gridDim.x;
-	int rows = blockDim.x;
 	float* p = gt_ + a2 * z;
-
 	int i = y[tid * cols + bid];
 //	assert(i < 10);
 	p[i * cols + bid] = 1.0;
@@ -59,7 +57,7 @@ __global__ void set_gt_kernel(float* gt_, float* y , int a2) {
 void set_groundtruth(cuMatrix4d& gt, cuMatrix& sampleY) {
 	dim3 block = dim3(sampleY.cols(),gt.channals() * gt.ts());
 	dim3 thread = dim3(sampleY.rows());
-	set_gt_kernel<<<block, thread>>>(gt.get_devPoint(), sampleY.getDev(),gt.area2D());
+	set_gt_kernel<<<block, thread>>>(gt.getDev(), sampleY.getDev(),gt.area2D());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("set_groundtruth ");
 }
@@ -108,29 +106,25 @@ void Data2GPU(vector<vector<int> > &trainX, vector<vector<int> > &trainY,
 	initTraindata(trainX, trainY);
 }
 
-__global__ void getDataMat_kernel(float** sampleX, int* src, int off, int cols,
-		int ngram) {
+__global__ void getDataMat_kernel(float* sampleX, int* src, int off, int cols,
+		int ngram, int a2) {
 	int tid = threadIdx.x;
 	int bid = blockIdx.x;
-	float *p = sampleX[tid];
+	float *p = sampleX + tid * a2;
 	int n = src[(off + bid) * ngram + tid];
 	p[n * cols + bid] = 1.0;
 }
 
-void getDataMat(cuMatrixVector &sampleX, int off, int bs, int n, bool flag) {
+void getDataMat(cuMatrix4d &sampleX, int off, int bs, int n, bool flag) {
 	int ngram = Config::instance()->get_ngram();
-	for (int i = 0; i < Config::instance()->get_ngram(); i++) {
-		sampleX.push_back(new cuMatrix(n, bs));
-	}
-	sampleX.toGpu();
 	dim3 thread = dim3(ngram);
 	dim3 block = dim3(bs);
 	if (flag) {
-		getDataMat_kernel<<<block, thread>>>(sampleX.get_devPoint(),
-				Samples::instance()->get_trainX(), off, bs, ngram);
+		getDataMat_kernel<<<block, thread>>>(sampleX.getDev(),
+				Samples::instance()->get_trainX(), off, bs, ngram, sampleX.area2D());
 	} else {
-		getDataMat_kernel<<<block, thread>>>(sampleX.get_devPoint(),
-				Samples::instance()->get_testX(), off, bs, ngram);
+		getDataMat_kernel<<<block, thread>>>(sampleX.getDev(),
+				Samples::instance()->get_testX(), off, bs, ngram, sampleX.area2D());
 	}
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("getDataMat_kernel ");

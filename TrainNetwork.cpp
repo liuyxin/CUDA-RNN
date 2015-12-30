@@ -64,7 +64,7 @@ void trainNetwork(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR,
 	float mu = 1e-2;
 	int k = 0;
 
-	cuMatrix4d acti_0(reword_sizel,Config::instance->get_batch_size(),1,Config::instance()->get_ngram());
+	cuMatrix4d acti_0(reword_size,Config::instance()->get_batch_size(),1,Config::instance()->get_ngram());
 	cuMatrix sampleY(Config::instance()->get_ngram(),
 			Config::instance()->get_batch_size());
 

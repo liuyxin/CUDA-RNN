@@ -11,7 +11,8 @@
 #include "helper_cuda.h"
 #include "MemoryMonitor.h"
 #include "hardware.h"
-#include "cuMath.h"
+#include "cuMatrix.h"
+//#include "cuMath.h"
 
 #define CUMATRIX4D_RIGHT_ONEOF 0
 #define CUMATRIX4D_LEFT_ONEOF  1
@@ -21,7 +22,7 @@ class cuMatrix4d {
 	public:
 		static std::map<int, std::shared_ptr<MatData>> tmpMemory;
 		std::shared_ptr<MatData> data;
-		cuMatrix4d(int r,int c,int ch,int t){
+		cuMatrix4d(int r = 0 ,int c = 0 ,int ch = 0 ,int t = 0){
 			row = r;
 			col = c;
 			channal = ch;
@@ -29,7 +30,6 @@ class cuMatrix4d {
 			area2 = r * c;
 			area3 = r * c * ch;
 			len_ = area3 * t;		
-			assert(len_ != 0 );
 			size = len_ * sizeof(float);
 			data = std::make_shared< MatData >(r,c,ch,t);
 		}	
@@ -42,7 +42,6 @@ class cuMatrix4d {
 			area3 = r * c * ch;
 			len_ = area3 * t;		
 			size = len_ * sizeof(float);
-			assert(size == td->sizes());
 			data = td;
 		}	
 		int rows() {
@@ -112,9 +111,9 @@ class cuMatrix4d {
 			delete [] f[1];
 			delete [] f[0];
 		}
-		void t();
 		float& getSum();
 		cuMatrix4d Mul(cuMatrix4d m);
+		cuMatrix4d t();
 
 	private:
 		int row;
@@ -127,18 +126,5 @@ class cuMatrix4d {
 		float sum;
 		unsigned int size;
 };
-cublasHandle_t& getHandle();
-void cuMatrix4d_Add(cuMatrix4d& src1,cuMatrix4d& src2, cuMatrix4d& dst);	
-//dst = src1 * src2;
-void cuMatrix4d_matMul(cuMatrix4d& src1,cuMatrix4d& src2, cuMatrix4d& dst);	
-void cuMatrix4d_matMul(cuMatrix src1, cuMatrix4d& src2, cuMatrix4d& dst);
-//dst = src1.Mul(src2);
-void cuMatrix4d_eleMul(cuMatrix4d& src1,cuMatrix4d& src2, cuMatrix4d& dst);	
-void cuMatrix4dRightTrans(cuMatrix4d& src,cuMatrix& dst);
-void cuMatrix4dRightInverseTrans(cuMatrix&src,cuMatrix4d& dst);
-void extractMatrix(cuMatrix& src,cuMatrix4d& dst);
-
-//cuMatrix4d math
-void square(cuMatrix4d& src,cuMatrix4d& dst);
 
 #endif
