@@ -69,6 +69,10 @@ int main() {
 		<<Config::instance()->testXNum()<<endl;
 	init_HLandSMR(Config::instance()->HiddenConfigs, Hiddenlayers, SMR,
 			re_word.size());
+	for (int i = 0; i < Hiddenlayers.size(); i++) {
+	printf("Hiddenlayers[i].U_l.sum = %f\n",Hiddenlayers[i].U_l.getSum());
+	printf("Hiddenlayers[i].U_r.sum = %f\n",Hiddenlayers[i].U_r.getSum());
+	}
 
 	Data2GPU(trainX, trainY, testX, testY);
 	trainNetwork(Hiddenlayers,SMR,re_word.size());

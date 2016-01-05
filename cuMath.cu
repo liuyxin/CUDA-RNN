@@ -502,11 +502,15 @@ void cuMatrix4d_matMul(cuMatrix4d& src1,cuMatrix4d src2, cuMatrix4d& dst)
 			cuMatrix::tmpMemory[size] = tmpRes.data;
 		}
 		cuMatrix tmpSrc2;	
-		if (cuMatrix::tmpMemory.find(src2.sizes()) != cuMatrix::tmpMemory.end()) {
-			tmpSrc2 = cuMatrix(cuMatrix::tmpMemory[src2.sizes()], src2.rows(),src2.channals() * src2.ts() * src2.cols());
+		unsigned int size2 = src2.sizes();
+		if(size == size2){
+			size2 += 1;  // bytes
+		}
+		if (cuMatrix::tmpMemory.find(size2) != cuMatrix::tmpMemory.end()) {
+			tmpSrc2 = cuMatrix(cuMatrix::tmpMemory[size2], src2.rows(),src2.channals() * src2.ts() * src2.cols());
 		} else{ 
 			tmpSrc2 = cuMatrix(src2.rows(),src2.channals() * src2.ts() * src2.cols());
-			cuMatrix::tmpMemory[src2.sizes()] = tmpSrc2.data;
+			cuMatrix::tmpMemory[size2] = tmpSrc2.data;
 		}
 		cuMatrix4dRightTrans(src2,tmpSrc2);
 
@@ -581,11 +585,15 @@ void cuMatrix4d_matMul(cuMatrix src1, cuMatrix4d& src2, cuMatrix4d& dst){
 			cuMatrix::tmpMemory[size] = tmpRes.data;
 		}
 		cuMatrix tmpSrc2;	
-		if (cuMatrix::tmpMemory.find(src2.sizes()) != cuMatrix::tmpMemory.end()) {
-			tmpSrc2 = cuMatrix(cuMatrix::tmpMemory[src2.sizes()], src2.rows(),src2.channals() * src2.ts() * src2.cols());
+		unsigned int size2 = src2.sizes();
+		if(size == size2){
+			size2 += 1;  // bytes
+		}
+		if (cuMatrix::tmpMemory.find(size2) != cuMatrix::tmpMemory.end()) {
+			tmpSrc2 = cuMatrix(cuMatrix::tmpMemory[size2], src2.rows(),src2.channals() * src2.ts() * src2.cols());
 		} else{ 
 			tmpSrc2 = cuMatrix(src2.rows(),src2.channals() * src2.ts() * src2.cols());
-			cuMatrix::tmpMemory[src2.sizes()] = tmpSrc2.data;
+			cuMatrix::tmpMemory[size2] = tmpSrc2.data;
 		}
 		cuMatrix4dRightTrans(src2,tmpSrc2);
 

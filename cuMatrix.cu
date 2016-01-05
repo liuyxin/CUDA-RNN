@@ -1,6 +1,8 @@
 #include "cuMatrix.h"
 
 static int MAX_THREADNUM = Devices::instance()->maxThreadNum();
+static __device__ unsigned int __count = 0;
+static __shared__ bool isLastBlockDone;
 //map<int, shared_ptr<MatData> > cuMatrix::TmpMemory;
 
 cublasHandle_t& getHandle() {
@@ -478,11 +480,14 @@ void cuMatrix::Square2(cuMatrix& cumat){
 
 __global__ void getSumKernel_(float* src,float* c,int col){
 	extern __shared__ float sm[]; 
-	const int x = blockIdx.x;
-	const int y = threadIdx.x;
+	int x = blockIdx.x;
+	int y = threadIdx.x;
 	int t = y;
+	sm[y] = src[x * col  + y];
+	t += blockDim.x;
+//      __syncthreads();
 	while(t < col){
-		sm[y] = src[t];
+		sm[y] += src[x*col  + t];
 		t += blockDim.x;
 	}
 	__syncthreads();
@@ -497,13 +502,18 @@ __global__ void getSumKernel_(float* src,float* c,int col){
 	}
 	if(y == 0){
 		c[x] = sm[0];
+		__threadfence();
+		unsigned int value = atomicInc(&__count , gridDim.x);//count > gridDim.x? 0 : count++;
+		isLastBlockDone = (value == (gridDim.x-1));
 	}
 	__syncthreads();
-	if(x == 0){
+	if(isLastBlockDone){
 		int len = gridDim.x;
 		t = y;
+		sm[y] = c[t];
+		t += blockDim.x;
 		while(t < len){
-			sm[y] = c[t];
+			sm[y] += c[t];
 			t += blockDim.x;
 		}
 		__syncthreads();
@@ -519,7 +529,9 @@ __global__ void getSumKernel_(float* src,float* c,int col){
 		if(y == 0){
 			c[0] = sm[0];
 		}
+		__count = 0;
 	}
+	__syncthreads();
 }
 
 float& cuMatrix::getSum(){
@@ -527,8 +539,8 @@ float& cuMatrix::getSum(){
 	if (cuMatrix::tmpMemory.find(tmpSize) == cuMatrix::tmpMemory.end()) {
 		tmpMemory[tmpSize] = make_shared < MatData >(rows(),1);
 	}
-	int smlen = cols()>rows()?cols():rows();
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
+	int smlen = threadnum;
 	getSumKernel_<<<dim3(rows()),dim3(threadnum),smlen*sizeof(float)>>>(getDev(),tmpMemory[tmpSize]->getDev(),cols());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("cuMatrix4d::getSum()");

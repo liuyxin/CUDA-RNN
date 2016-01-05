@@ -120,7 +120,7 @@ class Devices {
 			return prop.maxGridSize;
 		}
 		size_t get_sharedmemorysize(){
-			printf("sharedmemory size:%d\n",prop.sharedMemPerBlock);
+		//	printf("sharedmemory size:%d\n",prop.sharedMemPerBlock);
 			return prop.sharedMemPerBlock;
 		}
 		cudaDeviceProp get_prop(){

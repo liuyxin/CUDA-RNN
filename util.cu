@@ -98,7 +98,7 @@ __global__ void smrKernel(float* p,int a2){
   	extern __shared__ float cache[];
 	int x = threadIdx.x;
 	int y = blockIdx.x;
-	int z = blockIdx.z;
+	int z = blockIdx.y;
 	float *max_ = cache;
 	float *sum_ = cache + blockDim.x;
 	max_[x] = p[a2*z + x*gridDim.x + y];	

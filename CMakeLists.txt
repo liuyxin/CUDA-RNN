@@ -45,11 +45,12 @@ set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}
   -gencode arch=compute_35,code=sm_35
   -gencode arch=compute_50,code=sm_50
   -gencode arch=compute_50,code=compute_50
+#  -arch=sm_11
   -rdc=true
   )
-
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}
   )
+MESSAGE (${CUDA_NVCC_FLAGS})
 
 #add_library(${EXAMPLE_NAME}.o OBJECT ${source})
 #set(EXAMPLE_OBJ_LIB $<TARGET_OBJECTS:${EXAMPLE_NAME}.o>)

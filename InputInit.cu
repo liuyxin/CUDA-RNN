@@ -46,21 +46,21 @@ void init_acti0(cuMatrix4d& acti_0, cuMatrix& sampleY) {
 __global__ void set_gt_kernel(float* gt_, float* y , int a2) {
 	int tid = threadIdx.x;
 	int bid = blockIdx.x;
-	int z = blockIdx.y;
 	int cols = gridDim.x;
-	float* p = gt_ + a2 * z;
+	float* p = gt_ + a2 * tid;
 	int i = y[tid * cols + bid];
-//	assert(i < 10);
+	assert(i < 10);
 	p[i * cols + bid] = 1.0;
 }
 
 void set_groundtruth(cuMatrix4d& gt, cuMatrix& sampleY) {
-	dim3 block = dim3(sampleY.cols(),gt.channals() * gt.ts());
+	dim3 block = dim3(sampleY.cols());
 	dim3 thread = dim3(sampleY.rows());
 	set_gt_kernel<<<block, thread>>>(gt.getDev(), sampleY.getDev(),gt.area2D());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("set_groundtruth ");
 }
+
 
 void initTestdata(vector<vector<int> > &testX, vector<vector<int> > &testY) {
 	int *host_X = (int *) malloc(

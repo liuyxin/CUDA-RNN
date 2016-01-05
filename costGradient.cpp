@@ -59,6 +59,8 @@ void costParamentInit(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR) {
 	}
 	for(int i = 0 ; i < HiddenNum ; i ++){
 		creatBnl(bernoulli_l[i],1.0f);
+		creatBnl(bernoulli_r[i],1.0f);
+				printf("bnll.sum = %d,bnlr.sum = %d\n",bernoulli_l[i].getSum(),bernoulli_r[i].getSum());
 	}
 }
 
@@ -78,6 +80,11 @@ void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
 	for (int i = 1; i <= HiddenNum; i++) {
 		if (Config::instance()->HiddenConfigs[i - 1].get_DropoutRate()< 1.0) {
 			creatBnl(bernoulli_l[i-1],Config::instance()->HiddenConfigs[i - 1].get_DropoutRate());
+			creatBnl(bernoulli_r[i-1],Config::instance()->HiddenConfigs[i - 1].get_DropoutRate());
+	//		printf("******************* add \n");
+	//		bernoulli_l[i-1].printMat();
+	//		printf("%f\n",bernoulli_l[i-1].getSum());
+	//		int a; cin >>a;
 		}
 		// time forward
 		cuMatrix4d_matMul(Hiddenlayers[i-1].U_l, acti_sum[i-1],nonlin_l[i-1]);	
@@ -88,10 +95,8 @@ void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
 		hiddenForward(nonlin_r[i-1],acti_r[i],Hiddenlayers[i-1].W_r,bernoulli_r[i-1],TIMEBACKWARD);
 		square(acti_r[i],acti_r2[i]);
 	
-		for (int i = 1; i < acti_r.size(); i++) {
-			cuMatrix4d_Add(acti_r[i], acti_l[i], acti_sum[i]);
-			cuMatrix4d_Add(acti_r2[i], acti_l2[i], acti2_sum[i]);
-		}
+		cuMatrix4d_Add(acti_r[i], acti_l[i], acti_sum[i]);
+		cuMatrix4d_Add(acti_r2[i], acti_l2[i], acti2_sum[i]);
 	}
 	// softmax layer forward
         smrForward(SMR.W_r,acti_r[acti_r.size() - 1], SMR.W_l,acti_l[acti_l.size() - 1], p);
@@ -103,13 +108,13 @@ void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
 	float j3 = 0.0f;
 	float j4 = 0.0f;
 	cuMatrix4d tmpMat = groundTruth.Mul(Log(p));
+//	printf("j1 = %f\n",tmpMatgetSum());
+//	exit(0);
 	j1 -= tmpMat.getSum();
 	j1 /= nSamples;
-	
 	j2 = Pow(SMR.W_l, 2.0f).getSum();
 	j2 += Pow(SMR.W_r, 2.0f).getSum();
 	j2 = j2 * SMR.get_WeightDecay() / 2;
-
 	for (int i = 0; i < Hiddenlayers.size(); i++) {
 		j3 += Pow(Hiddenlayers[i].W_l, 2).getSum();
 		j3 += Pow(Hiddenlayers[i].W_r, 2).getSum();
@@ -123,6 +128,7 @@ void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
 	SMR.cost = j1 + j2 + j3 + j4;
 
 	printf("j1 = %f,j2 = %f,j3 = %f,j4 = %f,smr.cost = %f\n", j1, j2, j3, j4,SMR.cost);
+	int aaa;cin >>aaa;
 	// SMR backward	(dis = - (groundTruth - p))
 	cuDec(p, groundTruth, dis);
 	square(dis,dis2);

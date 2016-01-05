@@ -1,13 +1,17 @@
 #include "cuMatrix4d.h"
-const int MAX_THREADNUM = Devices::instance()->maxThreadNum();
+static int MAX_THREADNUM = Devices::instance()->maxThreadNum();
+static __device__ unsigned int __count = 0;
+static __shared__ bool isLastBlockDone;
 __global__ void getSumKernel(float* src, float* c, int col){
 	extern __shared__ float sm[]; 
 	int x = blockIdx.x;
 	int y = threadIdx.x;
-	int z = blockIdx.y;
 	int t = y;
+	sm[y] = src[x * col  + y];
+	t += blockDim.x;
+//	__syncthreads();
 	while(t < col){
-		sm[y] = src[t];
+		sm[y] += src[x*col  + t];
 		t += blockDim.x;
 	}
 	__syncthreads();
@@ -21,14 +25,19 @@ __global__ void getSumKernel(float* src, float* c, int col){
 		__syncthreads();
 	}
 	if(y == 0){
-		c[z*gridDim.x+x] = sm[0];
+		c[x] = sm[0];
+		__threadfence();
+			unsigned int value = atomicInc(&__count , gridDim.x);//count > gridDim.x? 0 : count++;
+			isLastBlockDone = (value == (gridDim.x-1));
 	}
 	__syncthreads();
-	if(x == 0 && z == 0){
-		int len = gridDim.x * gridDim.y;
+	if(isLastBlockDone){
+		int len = gridDim.x;
 		t = y;
+		sm[y] = c[t];
+		t += blockDim.x;
 		while(t < len){
-			sm[y] = c[t];
+			sm[y] += c[t];
 			t += blockDim.x;
 		}
 		__syncthreads();
@@ -44,20 +53,23 @@ __global__ void getSumKernel(float* src, float* c, int col){
 		if(y == 0){
 			c[0] = sm[0];
 		}
+		__count = 0 ;
 	}
+	__syncthreads();
 }
 
 float& cuMatrix4d::getSum(){
 	int tmpSize = rows() * channals() * ts() * sizeof(float); 	
 	if (cuMatrix::tmpMemory.find(tmpSize) == cuMatrix::tmpMemory.end()) {
-		cuMatrix::tmpMemory[tmpSize] = make_shared < MatData >(rows() * channals() * ts() ,1);
+		cuMatrix::tmpMemory[tmpSize] = make_shared < MatData >(1,rows() * channals() * ts());
 	}
-	int smlen = cols()>rows()*channals()*ts()?cols():rows()*channals()*ts();
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
-	getSumKernel<<<dim3(rows(),channals()*ts()),dim3(threadnum), smlen * sizeof(float)>>>(getDev(),cuMatrix::tmpMemory[tmpSize]->getDev(),cols());
+	int smlen = threadnum;
+	getSumKernel<<<dim3(rows()*channals()*ts()),dim3(threadnum), smlen * sizeof(float)>>>(getDev(),cuMatrix::tmpMemory[tmpSize]->getDev(),cols());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("cuMatrix4d::getSum()");
 	cudaMemcpyAsync(&sum,cuMatrix::tmpMemory[tmpSize]->getDev(),sizeof(float),cudaMemcpyDeviceToHost);
+//	cudaMemcpy(&sum,cuMatrix::tmpMemory[tmpSize]->getDev(),sizeof(float),cudaMemcpyDeviceToHost);
 	return sum;
 }
 
