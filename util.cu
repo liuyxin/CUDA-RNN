@@ -95,7 +95,7 @@ void hiddenForward(cuMatrix4d& nonlin, cuMatrix4d& acti,cuMatrix& weight,cuMatri
 //block.x: p.cols(); block.y:p.channals()*p.ts()
 //thread:p.rows()
 __global__ void smrKernel(float* p,int a2){
-  	extern __shared__ float cache[];
+	extern __shared__ float cache[];
 	int x = threadIdx.x;
 	int y = blockIdx.x;
 	int z = blockIdx.y;
@@ -105,7 +105,7 @@ __global__ void smrKernel(float* p,int a2){
 	__syncthreads();
 	int len = blockDim.x;
 	while(len != 1){
-        	int skip = (len + 1) >> 1;
+		int skip = (len + 1) >> 1;
 		if(x < (len >> 1)){
 			max_[x] = __max(cache[x],cache[x+skip]);			
 		}
@@ -144,68 +144,79 @@ void smrForward(cuMatrix& wr,cuMatrix4d& ar,cuMatrix& wl, cuMatrix4d& al,cuMatri
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("smrForward");
 }
-__global__ void getSmrgrad(float* src,  float* dst, int cols, int ts, int a2){
+
+__global__ void getSmrgrad(float* src, float* dst, float* w,int cols, int ts, int a2 , int nSamples, float decay) {
 	int x = blockIdx.x;
 	int y = threadIdx.x;
 	float* s = src;
 	float* d = dst;
-	while(y < cols){
-		d[x * cols + y] = 0 - s[x * cols + y];
-		d = d + a2;
-		s = s + a2;
-		for(int i = 1 ; i < ts ; i ++){
-			d[x * cols + y] -= s[x * cols + y];
-			d = d + a2;
-			s = s + a2;		
+	while (y < cols) {
+		d[x * cols + y] = 0 + s[x * cols + y];
+
+		for (int i = 1; i < ts; i++) {
+			s = s + a2;
+			d[x * cols + y] += s[x * cols + y];
 		}
+		d[x * cols + y] /= nSamples;
+		d[x * cols + y] += decay * w[x * cols + y];
 		y += blockDim.x;
 	}
 }
-__global__ void getSmrd2(float* src,  float* dst, int cols, int ts,int a2) {
+__global__ void getSmrd2(float* src, float* dst, int cols, int ts, int a2, int nSamples, float decay) {
 	int x = blockIdx.x;
 	int y = threadIdx.x;
-	float* s = src;
-	float* d = dst;
-	while(y < cols){
+	while (y < cols) {
+		float* s = src;
+		float* d = dst;
 		d[x * cols + y] = s[x * cols + y];
-		d = d + a2;
-		s = s + a2;		
-		for(int i = 1 ; i < ts ; i ++){
+
+		for (int i = 1; i < ts; i++) {
+			s = s + a2;
 			d[x * cols + y] += s[x * cols + y];
-			d = d + a2;
-			s = s + a2;		
 		}
+		d[x * cols + y] /= nSamples;
+		d[x * cols + y] += decay;
 		y += blockDim.x;
 	}
 }
 
-void smrBP(SoftMax& smr, cuMatrix4d& acti_l,cuMatrix4d& acti_r,cuMatrix4d& acti_l2,cuMatrix4d& acti_r2,cuMatrix4d& dis, cuMatrix4d& dis2, int nSamples){
+void smrBP(SoftMax& smr, cuMatrix4d& acti_l, cuMatrix4d& acti_r,
+		cuMatrix4d& acti_l2, cuMatrix4d& acti_r2, cuMatrix4d& dis,
+		cuMatrix4d& dis2, int nSamples) {
 	cuMatrix4d tmpRes;
-	int tmpSize = smr.W_l.sizes();
+	int tmpSize = smr.W_l.sizes() * dis.channals() * dis.ts();
 	if (cuMatrix::tmpMemory.find(tmpSize) != cuMatrix::tmpMemory.end()) {
-		tmpRes = cuMatrix4d(cuMatrix::tmpMemory[tmpSize], smr.W_l.rows(), smr.W_l.cols(), dis.channals(), dis.ts());
+		tmpRes = cuMatrix4d(cuMatrix::tmpMemory[tmpSize], smr.W_l.rows(),
+				smr.W_l.cols(), dis.channals(), dis.ts());
 	} else {
-		tmpRes = cuMatrix4d(smr.W_l.rows(), smr.W_l.cols(), dis.channals(), dis.ts());
+		tmpRes = cuMatrix4d(smr.W_l.rows(), smr.W_l.cols(), dis.channals(),
+				dis.ts());
 		cuMatrix::tmpMemory[tmpSize] = tmpRes.data;
 	}
 	cuMatrix4d_matMul(dis, acti_l.t(), tmpRes);
-	int threadnum = MAX_THREADNUM > tmpRes.cols() ? tmpRes.cols() : MAX_THREADNUM;
-	getSmrgrad<<<dim3(tmpRes.rows()),dim3(threadnum)>>>(tmpRes.getDev(),smr.W_lgrad.getDev(),tmpRes.cols(),tmpRes.ts(),tmpRes.area2D());	
+
+	int threadnum =
+		MAX_THREADNUM > tmpRes.cols() ? tmpRes.cols() : MAX_THREADNUM;
+	getSmrgrad<<<dim3(tmpRes.rows()), dim3(threadnum)>>>(tmpRes.getDev(),
+			smr.W_lgrad.getDev(), smr.W_l.getDev(), tmpRes.cols(), tmpRes.ts(), tmpRes.area2D(),nSamples,smr.get_WeightDecay());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("smrBP: getSmrlgrad");
 
 	cuMatrix4d_matMul(dis, acti_r.t(), tmpRes);
-	getSmrgrad<<<dim3(tmpRes.rows()),dim3(threadnum)>>>(tmpRes.getDev(),smr.W_rgrad.getDev(),tmpRes.cols(),tmpRes.ts(),tmpRes.area2D());	
+	getSmrgrad<<<dim3(tmpRes.rows()), dim3(threadnum)>>>(tmpRes.getDev(),
+			smr.W_rgrad.getDev(),smr.W_r.getDev(), tmpRes.cols(), tmpRes.ts(), tmpRes.area2D(),nSamples,smr.get_WeightDecay());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("smrBP: getSmrrgrad");
 
 	cuMatrix4d_matMul(dis2, acti_l2.t(), tmpRes);
-	getSmrd2<<<dim3(tmpRes.rows()),dim3(threadnum)>>>(tmpRes.getDev(),smr.W_ld2.getDev(),tmpRes.cols(),tmpRes.ts(),tmpRes.area2D());	
+	getSmrd2<<<dim3(tmpRes.rows()), dim3(threadnum)>>>(tmpRes.getDev(),
+			smr.W_ld2.getDev(), tmpRes.cols(), tmpRes.ts(), tmpRes.area2D(),nSamples,smr.get_WeightDecay());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("smrBP: getSmrld2");
 
 	cuMatrix4d_matMul(dis2, acti_r2.t(), tmpRes);
-	getSmrd2<<<dim3(tmpRes.rows()),dim3(threadnum)>>>(tmpRes.getDev(),smr.W_rd2.getDev(),tmpRes.cols(),tmpRes.ts(),tmpRes.area2D());	
+	getSmrd2<<<dim3(tmpRes.rows()), dim3(threadnum)>>>(tmpRes.getDev(),
+			smr.W_rd2.getDev(), tmpRes.cols(), tmpRes.ts(), tmpRes.area2D(),nSamples,smr.get_WeightDecay());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("smrBP: getSmrrd2");
 }
@@ -314,13 +325,13 @@ __global__ void gradKernle(float* src, float* dst, float a, int nSamples , int a
 
 
 void hiddenGetUgrad(cuMatrix4d& delta_l, cuMatrix4d& delta_r, 
-		    cuMatrix4d& delta_ld2, cuMatrix4d& delta_rd2,
-		    cuMatrix4d& acti_sum, cuMatrix4d& acti2_sum, HiddenLayer& hidden ,float WeightDecay){
+		cuMatrix4d& delta_ld2, cuMatrix4d& delta_rd2,
+		cuMatrix4d& acti_sum, cuMatrix4d& acti2_sum, HiddenLayer& hidden ,float WeightDecay){
 	cuMatrix4d tmpRes;
 	int ts = delta_l.ts();
 	int nSamples = delta_l.cols();
-//	float alpha = 1.0;
-//	float beta = 0.0;
+	//	float alpha = 1.0;
+	//	float beta = 0.0;
 	int threadnum = MAX_THREADNUM > hidden.U_lgrad.cols() ? hidden.U_lgrad.cols() : MAX_THREADNUM;
 	int tmpSize = hidden.U_lgrad.sizes() * delta_l.ts();
 	if (cuMatrix::tmpMemory.find(tmpSize) != cuMatrix::tmpMemory.end()) {
@@ -333,26 +344,26 @@ void hiddenGetUgrad(cuMatrix4d& delta_l, cuMatrix4d& delta_r,
 	//U_lgrad
 	cuMatrix4d_matMul(delta_l, acti2_sum.t() , tmpRes);
 	gradKernle<<<dim3(tmpRes.rows()), dim3(threadnum)>>>(tmpRes.getDev(), hidden.U_lgrad.getDev(), hidden.U_l.getDev(), 
-			   WeightDecay, nSamples, tmpRes.area2D(), tmpRes.ts(), tmpRes.cols());
+			WeightDecay, nSamples, tmpRes.area2D(), tmpRes.ts(), tmpRes.cols());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("U_lgrad");
 	//U_rgrad
 	cuMatrix4d_matMul(delta_r, acti_sum.t(), tmpRes);
 	gradKernle<<<dim3(tmpRes.rows()), dim3(threadnum)>>>(tmpRes.getDev(), hidden.U_rgrad.getDev(), hidden.U_r.getDev(), 
-			   WeightDecay, nSamples, tmpRes.area2D(), tmpRes.ts(), tmpRes.cols());
+			WeightDecay, nSamples, tmpRes.area2D(), tmpRes.ts(), tmpRes.cols());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("U_rgrad");
-	
+
 	//U_ld2
 	cuMatrix4d_matMul(delta_ld2, acti2_sum.t(), tmpRes);
 	gradKernle<<<dim3(tmpRes.rows()), dim3(threadnum)>>>(tmpRes.getDev(), hidden.U_ld2.getDev(),
-		   WeightDecay, nSamples, tmpRes.area2D(), tmpRes.ts(), tmpRes.cols());
+			WeightDecay, nSamples, tmpRes.area2D(), tmpRes.ts(), tmpRes.cols());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("U_ld2");
 	//U_rd2
 	cuMatrix4d_matMul(delta_rd2, acti2_sum.t(), tmpRes);
 	gradKernle<<<dim3(tmpRes.rows()), dim3(threadnum)>>>(tmpRes.getDev(), hidden.U_rd2.getDev(), 
-			  WeightDecay, nSamples, tmpRes.area2D(), tmpRes.ts(), tmpRes.cols());
+			WeightDecay, nSamples, tmpRes.area2D(), tmpRes.ts(), tmpRes.cols());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("U_rd2");
 }
@@ -367,17 +378,17 @@ void hiddenGetWgrad(cuMatrix4d& delta_l, cuMatrix4d& delta_r,
 	float beta = 0.0;
 	int threadnum = MAX_THREADNUM > hidden.U_lgrad.cols() ? hidden.U_lgrad.cols() : MAX_THREADNUM;
 	int nSamples = acti_l.cols();
-	int tmpSize = hidden.U_lgrad.sizes() * delta_l.ts();
+	int tmpSize = hidden.W_lgrad.sizes() * (delta_l.ts() - 1);
 	if (cuMatrix::tmpMemory.find(tmpSize) != cuMatrix::tmpMemory.end()) {
-		tmpRes = cuMatrix4d(cuMatrix::tmpMemory[tmpSize], hidden.U_lgrad.rows(), hidden.U_lgrad.cols(), delta_l.channals(), delta_l.ts());
+		tmpRes = cuMatrix4d(cuMatrix::tmpMemory[tmpSize], hidden.W_lgrad.rows(), hidden.W_lgrad.cols(), delta_l.channals(), delta_l.ts() - 1);
 	} else {
-		tmpRes = cuMatrix4d(hidden.U_lgrad.rows(), hidden.U_lgrad.cols(), delta_l.channals(), delta_l.ts());
+		tmpRes = cuMatrix4d(hidden.W_lgrad.rows(), hidden.W_lgrad.cols(), delta_l.channals(), delta_l.ts() - 1);
 		cuMatrix::tmpMemory[tmpSize] = tmpRes.data;
 	}
 	assert(tmpSize != acti_l.sizes());
 	// W_lgrad
 	cuMatrix4d acti_t = acti_l.t();
-	for(int i = 1 ; i < tmpRes.ts() ; i ++){
+	for(int i = 1 ; i < delta_l.ts() ; i ++){
 		for(int j = 0 ; j < tmpRes.channals() ; j ++){
 			cublasStatus_t stat;
 			float* s1 = delta_l.data->getDev() + i*delta_l.area3D() + j*delta_l.area2D();
@@ -394,11 +405,12 @@ void hiddenGetWgrad(cuMatrix4d& delta_l, cuMatrix4d& delta_r,
 		}
 	}
 	gradKernle<<<dim3(tmpRes.rows()), dim3(threadnum)>>>(tmpRes.getDev(), hidden.W_lgrad.getDev(), hidden.W_l.getDev(), 
-			   WeightDecay, nSamples, tmpRes.area2D(), tmpRes.ts()-1, tmpRes.cols());
+			WeightDecay, nSamples, tmpRes.area2D(), tmpRes.ts(), tmpRes.cols());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("W_lgrad");
 	// W_rgrad
-	for(int i = 0 ; i < tmpRes.ts() - 1 ; i ++){
+	acti_t = acti_r.t();
+	for(int i = 0 ; i < tmpRes.ts() ; i ++){
 		for(int j = 0 ; j < tmpRes.channals() ; j ++){
 			cublasStatus_t stat;
 			float* s1 = delta_r.data->getDev() + i*delta_r.area3D() + j*delta_r.area2D();
@@ -415,12 +427,12 @@ void hiddenGetWgrad(cuMatrix4d& delta_l, cuMatrix4d& delta_r,
 		}
 	}
 	gradKernle<<<dim3(tmpRes.rows()), dim3(threadnum)>>>(tmpRes.getDev(), hidden.W_rgrad.getDev(), hidden.W_r.getDev(),
-			  WeightDecay, nSamples, tmpRes.area2D(), tmpRes.ts()-1, tmpRes.cols());
+			WeightDecay, nSamples, tmpRes.area2D(), tmpRes.ts(), tmpRes.cols());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("W_lgrad");
 	// W_ld2
 	acti_t = acti_l2.t();
-	for(int i = 1 ; i < tmpRes.ts() ; i ++){
+	for(int i = 1 ; i < delta_l.ts(); i ++){
 		for(int j = 0 ; j < tmpRes.channals() ; j ++){
 			cublasStatus_t stat;
 			float* s1 = delta_ld2.data->getDev() + i*delta_ld2.area3D() + j*delta_ld2.area2D();
@@ -437,12 +449,12 @@ void hiddenGetWgrad(cuMatrix4d& delta_l, cuMatrix4d& delta_r,
 		}
 	}
 	gradKernle<<<dim3(tmpRes.rows()), dim3(threadnum)>>>(tmpRes.getDev(), hidden.W_ld2.getDev(), 
-			  WeightDecay, nSamples, tmpRes.area2D(), tmpRes.ts() - 1, tmpRes.cols());
+			WeightDecay, nSamples, tmpRes.area2D(), tmpRes.ts(), tmpRes.cols());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("W_ld2");
 	// W_rd2
 	acti_t = acti_r2.t();
-	for(int i = 0 ; i < tmpRes.ts() - 1 ; i ++){
+	for(int i = 0 ; i < tmpRes.ts() ; i ++){
 		for(int j = 0 ; j < tmpRes.channals() ; j ++){
 			cublasStatus_t stat;
 			float* s1 = delta_rd2.data->getDev() + i*delta_rd2.area3D() + j*delta_rd2.area2D();
@@ -459,8 +471,38 @@ void hiddenGetWgrad(cuMatrix4d& delta_l, cuMatrix4d& delta_r,
 		}
 	}
 	gradKernle<<<dim3(tmpRes.rows()), dim3(threadnum)>>>(tmpRes.getDev(), hidden.W_rd2.getDev(), 
-			  WeightDecay, nSamples, tmpRes.area2D(), tmpRes.ts()-1, tmpRes.cols());
+			WeightDecay, nSamples, tmpRes.area2D(), tmpRes.ts(), tmpRes.cols());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("W_rd2");
 }
-		
+
+
+__global__ void bpttInitKernel(float *l, float* r, int col) {
+	int x = blockIdx.x;
+	int y = threadIdx.x;
+	while (y < col) {
+		float sum = l[x * col + y] + r[x * col + y];
+		l[x * col + y] = sum;
+		r[x * col + y] = sum;
+		y += blockDim.x;
+	}
+}
+
+void bpttInit(HiddenLayer& hidden, cuMatrix4d& delta_l1, cuMatrix4d& delta_r1,
+		cuMatrix4d& delta_l, cuMatrix4d& delta_r,cuMatrix4d& delta_ld1, cuMatrix4d& delta_rd1,
+		cuMatrix4d& delta_ld, cuMatrix4d& delta_rd) {
+	cuMatrix4d_matMul(hidden.U_l.t(), delta_l1, delta_l);
+	cuMatrix4d_matMul(hidden.U_r.t(), delta_r1, delta_r);
+	cuMatrix4d_matMul(Pow(hidden.U_l.t(),2), delta_ld1, delta_ld);
+	cuMatrix4d_matMul(Pow(hidden.U_r.t(),2), delta_rd1, delta_rd);
+	int threadnum =
+		MAX_THREADNUM > delta_l.cols() ? delta_l.cols() : MAX_THREADNUM;
+	bpttInitKernel<<<dim3(delta_l.rows() * delta_l.ts() * delta_l.channals()),
+		dim3(threadnum)>>>(delta_l.getDev(), delta_r.getDev(),
+				delta_l.cols());
+	bpttInitKernel<<<dim3(delta_l.rows() * delta_l.ts() * delta_l.channals()),
+		dim3(threadnum)>>>(delta_ld.getDev(), delta_rd.getDev(),
+				delta_l.cols());
+	checkCudaErrors(cudaStreamSynchronize(0));
+	getLastCudaError("bpttInit");
+}

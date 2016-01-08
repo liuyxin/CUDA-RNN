@@ -36,4 +36,8 @@ void hiddenGetWgrad(cuMatrix4d& delta_l, cuMatrix4d& delta_r,
 		cuMatrix4d& delta_ld2, cuMatrix4d& delta_rd2,
 		cuMatrix4d& acti_l, cuMatrix4d& acti_r, 
 		cuMatrix4d& acti_l2, cuMatrix4d& acti_r2, HiddenLayer& hidden, float WeightDecay);
+
+void bpttInit(HiddenLayer& hidden, cuMatrix4d& delta_l1, cuMatrix4d& delta_r1,
+		cuMatrix4d& delta_l, cuMatrix4d& delta_r,cuMatrix4d& delta_ld1, cuMatrix4d& delta_rd1,
+		cuMatrix4d& delta_ld, cuMatrix4d& delta_rd);
 //#endif

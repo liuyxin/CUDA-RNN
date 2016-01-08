@@ -307,7 +307,7 @@ __global__ void cuDec_kernel(float* dev_x, float* dev_y, float* dev_z, int cols)
 	int y = threadIdx.x;
 	while (y < cols) {
 		dev_z[x * cols + y] = dev_x[x * cols + y] - dev_y[x * cols + y];
-		y += gridDim.x;
+		y += blockDim.x;
 	}
 }
 
@@ -502,7 +502,7 @@ void cuMatrix4d_matMul(cuMatrix4d& src1,cuMatrix4d src2, cuMatrix4d& dst)
 			cuMatrix::tmpMemory[size] = tmpRes.data;
 		}
 		cuMatrix tmpSrc2;	
-		unsigned int size2 = src2.sizes();
+		unsigned int size2 = src2.sizes() + 1;
 		if(size == size2){
 			size2 += 1;  // bytes
 		}

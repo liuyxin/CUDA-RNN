@@ -81,10 +81,6 @@ void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
 		if (Config::instance()->HiddenConfigs[i - 1].get_DropoutRate()< 1.0) {
 			creatBnl(bernoulli_l[i-1],Config::instance()->HiddenConfigs[i - 1].get_DropoutRate());
 			creatBnl(bernoulli_r[i-1],Config::instance()->HiddenConfigs[i - 1].get_DropoutRate());
-	//		printf("******************* add \n");
-	//		bernoulli_l[i-1].printMat();
-	//		printf("%f\n",bernoulli_l[i-1].getSum());
-	//		int a; cin >>a;
 		}
 		// time forward
 		cuMatrix4d_matMul(Hiddenlayers[i-1].U_l, acti_sum[i-1],nonlin_l[i-1]);	
@@ -108,8 +104,6 @@ void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
 	float j3 = 0.0f;
 	float j4 = 0.0f;
 	cuMatrix4d tmpMat = groundTruth.Mul(Log(p));
-//	printf("j1 = %f\n",tmpMatgetSum());
-//	exit(0);
 	j1 -= tmpMat.getSum();
 	j1 /= nSamples;
 	j2 = Pow(SMR.W_l, 2.0f).getSum();
@@ -128,7 +122,6 @@ void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
 	SMR.cost = j1 + j2 + j3 + j4;
 
 	printf("j1 = %f,j2 = %f,j3 = %f,j4 = %f,smr.cost = %f\n", j1, j2, j3, j4,SMR.cost);
-	int aaa;cin >>aaa;
 	// SMR backward	(dis = - (groundTruth - p))
 	cuDec(p, groundTruth, dis);
 	square(dis,dis2);
@@ -147,16 +140,13 @@ void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
         hiddenBPTT(delta_rd2[delta_rd2.size() - 1], Pow(Hiddenlayers[Hiddenlayers.size() - 1].W_r.t(),2), nonlin_r[nonlin_r.size() - 1], bernoulli_r[bernoulli_r.size() - 1], TIMEBACKWARD);
 	
 	for (int i = delta_l.size() - 2; i > 0; i--){
-		cuMatrix4d_matMul(Hiddenlayers[i].U_l.t(), delta_l[i + 1],delta_l[i]);
-		hiddenBPTT(delta_l[i], Hiddenlayers[i-1].W_l.t(),nonlin_l[i],bernoulli_l[i],TIMEFORWARD);
-		cuMatrix4d_matMul(Hiddenlayers[i].U_r.t(), delta_r[i + 1],delta_r[i]);
-		hiddenBPTT(delta_r[i], Hiddenlayers[i-1].W_r.t(),nonlin_r[i],bernoulli_r[i],TIMEBACKWARD);
-
-
-		cuMatrix4d_matMul(Pow(Hiddenlayers[i].U_l.t(),2), delta_ld2[i + 1],delta_ld2[i]);
-		hiddenBPTT(delta_ld2[i], Pow(Hiddenlayers[i-1].W_l.t(),2),nonlin_l[i],bernoulli_l[i],TIMEFORWARD);
-		cuMatrix4d_matMul(Pow(Hiddenlayers[i].U_r.t(),2), delta_rd2[i + 1],delta_rd2[i]);
-		hiddenBPTT(delta_rd2[i], Pow(Hiddenlayers[i-1].W_r.t(),2),nonlin_r[i],bernoulli_r[i],TIMEBACKWARD);
+		bpttInit(Hiddenlayers[i], delta_l[i + 1], delta_r[i + 1],
+				delta_l[i], delta_r[i], delta_ld2[i + 1], delta_rd2[i + 1],
+				delta_ld2[i], delta_rd2[i]);	
+		hiddenBPTT(delta_l[i], Hiddenlayers[i-1].W_l.t(),nonlin_l[i-1],bernoulli_l[i-1],TIMEFORWARD);
+		hiddenBPTT(delta_r[i], Hiddenlayers[i-1].W_r.t(),nonlin_r[i-1],bernoulli_r[i-1],TIMEBACKWARD);
+		hiddenBPTT(delta_ld2[i], Pow(Hiddenlayers[i-1].W_l.t(),2),nonlin_l[i-1],bernoulli_l[i-1],TIMEFORWARD);
+		hiddenBPTT(delta_rd2[i], Pow(Hiddenlayers[i-1].W_r.t(),2),nonlin_r[i-1],bernoulli_r[i-1],TIMEBACKWARD);
 	}	
 	//get grad
 	for (int i = HiddenNum - 1; i >= 0; i--){

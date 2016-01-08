@@ -102,7 +102,7 @@ cuMatrix4d cuMatrix4d::Mul(cuMatrix4d m) {
 __global__ void t_kernel(float* dev_src, float* dev_res, int res_r, int res_c, int a2){
 	int x = blockIdx.x;
 	int y = threadIdx.x;
-	int z = blockIdx.z;
+	int z = blockIdx.y;
 	while (y < res_c) {
 		dev_res[z * a2 + x * res_c + y] = dev_src[z * a2 +y * res_r + x];
 		y += blockDim.x;
