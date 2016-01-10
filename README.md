@@ -1,6 +1,6 @@
 # CUDA-RNN
-A simple Bidirectional RNN with CUDA to solve named entity recognition(NER) problem(about 93% accuracy for the toy dataset).
+A simple Bidirectional RNN with CUDA to solve named entity recognition(NER) problem.
 
-The utilization ratio of GPU is about 98% on GeForce GTX 750 .I'm trying to cut down the memory-access of GPU to improve performance.
+Do not use Debug version if you uses an IDE (nsight especially),use Release instead.
 
 C++ version: https://github.com/xingdi-eric-yuan/recurrent-net-version-1

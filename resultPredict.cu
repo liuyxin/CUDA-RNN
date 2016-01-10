@@ -4,6 +4,22 @@ __device__ float max_(float a, float b){
 	return a>b?a:b;
 }
 
+void testInit(vector<HiddenLayer> &Hiddenlayers) {
+	int HiddenNum = Config::instance()->HiddenConfigs.size();
+	al = std::vector<cuMatrix4d>(HiddenNum + 1);
+	ar = std::vector<cuMatrix4d>(HiddenNum + 1);
+	as = std::vector<cuMatrix4d>(HiddenNum + 1);
+	for (int i = 1; i < HiddenNum + 1; i++) {
+		int r = Hiddenlayers[i - 1].U_l.rows();
+		int c = i == 1 ?
+			Config::instance()->get_batch_size() : al[i - 1].cols();
+		al[i] = cuMatrix4d(r, c, 1, Config::instance()->get_ngram());
+		ar[i] = cuMatrix4d(r, c, 1, Config::instance()->get_ngram());
+		as[i] = cuMatrix4d(r, c, 1, Config::instance()->get_ngram());
+	}
+}
+
+
 void testNetwork(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR, bool flag) {
 	int size =
 		flag ? Config::instance()->trainXNum() : Config::instance()->testXNum();
@@ -15,7 +31,7 @@ void testNetwork(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR, bool flag) {
 	int batch_amount = size / batch_size;
 	for (int i = 0; i < batch_amount; i++) {
 		offset = i * batch_size;
-		cuMatrix4d sampleX;
+		cuMatrix4d sampleX(wn, batch_size, 1, Config::instance()->get_ngram());
 		getDataMat(sampleX, offset, batch_size, wn, flag);
 
 		predict(sampleX, Hiddenlayers, SMR, res, offset);
@@ -23,7 +39,15 @@ void testNetwork(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR, bool flag) {
 	offset = batch_amount * batch_size;
 	if (size % batch_size) {
 		batch_size = size % batch_size;
-		cuMatrix4d sampleX;
+		cuMatrix4d sampleX(wn, batch_size, 1, Config::instance()->get_ngram());
+		for (int i = 1; i < Hiddenlayers.size() + 1; i++) {
+			int r = Hiddenlayers[i - 1].U_l.rows();
+			int c = i == 1 ?
+				batch_size : al[i - 1].cols();
+			al[i] = cuMatrix4d(r, c, 1, Config::instance()->get_ngram());
+			ar[i] = cuMatrix4d(r, c, 1, Config::instance()->get_ngram());
+			as[i] = cuMatrix4d(r, c, 1, Config::instance()->get_ngram());
+		}
 		getDataMat(sampleX, offset, batch_size, wn, size);
 		predict(sampleX, Hiddenlayers, SMR, res, offset);
 	}
@@ -40,34 +64,62 @@ void testNetwork(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR, bool flag) {
 	delete[] res;
 	delete[] truth;
 }
+
+//void predict(cuMatrix4d &sampleX, vector<HiddenLayer> &Hiddenlayers,
+//		SoftMax &SMR, int* output, int offset) {
+//	int T = sampleX.sizes();
+//	int HiddenNum = Config::instance()->HiddenConfigs.size();
+//	std::vector<cuMatrix4d > acti_l(HiddenNum + 1);
+//	std::vector<cuMatrix4d > acti_r(HiddenNum + 1);
+//	std::vector<cuMatrix4d > acti_sum(HiddenNum + 1);
+//	acti_l[0] = sampleX;
+//	acti_r[0] = sampleX;
+//	acti_sum[0] = sampleX;
+//	for (int i = 1; i <= HiddenNum; ++i) {
+//		float DropoutRate = Config::instance()->HiddenConfigs[i - 1].get_DropoutRate();
+//		//time forward
+//		cuMatrix4d_matMul(Hiddenlayers[i-1].U_l, acti_sum[i-1],acti_l[i]);	
+//		hiddenForward_(acti_l[i],Hiddenlayers[i-1].W_l,DropoutRate,TIMEFORWARD);
+//		//time backward
+//		cuMatrix4d_matMul(Hiddenlayers[i-1].U_r, acti_sum[i-1],acti_r[i]);	
+//		hiddenForward_(acti_r[i],Hiddenlayers[i-1].W_r,DropoutRate,TIMEBACKWARD);
+//		for (int i = 1; i < acti_r.size(); i++) {
+//			cuMatrix4d_Add(acti_r[i], acti_l[i], acti_sum[i]);
+//		}
+//	}
+//	cuMatrix M(SMR.W_l.rows(), acti_l[acti_l.size() - 1].cols());
+//	smrForward_(M,acti_l[acti_l.size() - 1],acti_r[acti_r.size() - 1],SMR);
+//	get_res_array(M, output, offset);
+//}
+
+
 void predict(cuMatrix4d &sampleX, vector<HiddenLayer> &Hiddenlayers,
 		SoftMax &SMR, int* output, int offset) {
 	int T = sampleX.sizes();
 	int HiddenNum = Config::instance()->HiddenConfigs.size();
-	std::vector<cuMatrix4d > acti_l(HiddenNum + 1);
-	std::vector<cuMatrix4d > acti_r(HiddenNum + 1);
-	std::vector<cuMatrix4d > acti_sum(HiddenNum + 1);
-	acti_l[0] = sampleX;
-	acti_r[0] = sampleX;
-	acti_sum[0] = sampleX;
+	al[0] = sampleX;
+	ar[0] = sampleX;
+	as[0] = sampleX;
 	for (int i = 1; i <= HiddenNum; ++i) {
-		float DropoutRate = Config::instance()->HiddenConfigs[i - 1].get_DropoutRate();
+		float DropoutRate =
+			Config::instance()->HiddenConfigs[i - 1].get_DropoutRate();
 		//time forward
-		cuMatrix4d_matMul(Hiddenlayers[i-1].U_l, acti_sum[i-1],acti_l[i]);	
-		hiddenForward_(acti_l[i],Hiddenlayers[i-1].W_l,DropoutRate,TIMEFORWARD);
+		cuMatrix4d_matMul(Hiddenlayers[i - 1].U_l, as[i - 1], al[i]);
+		hiddenForward_(al[i], Hiddenlayers[i - 1].W_l, DropoutRate,
+				TIMEFORWARD);
 		//time backward
-		cuMatrix4d_matMul(Hiddenlayers[i-1].U_r, acti_sum[i-1],acti_r[i]);	
-		hiddenForward_(acti_r[i],Hiddenlayers[i-1].W_r,DropoutRate,TIMEBACKWARD);
-		for (int i = 1; i < acti_r.size(); i++) {
-			cuMatrix4d_Add(acti_r[i], acti_l[i], acti_sum[i]);
+
+		cuMatrix4d_matMul(Hiddenlayers[i - 1].U_r, as[i - 1], ar[i]);
+		hiddenForward_(ar[i], Hiddenlayers[i - 1].W_r, DropoutRate,
+				TIMEBACKWARD);
+		for (int i = 1; i < ar.size(); i++) {
+			cuMatrix4d_Add(ar[i], al[i], as[i]);
 		}
 	}
-	cuMatrix M(SMR.W_l.rows(), acti_l[acti_l.size() - 1].cols());
-	smrForward_(M,acti_l[acti_l.size() - 1],acti_r[acti_r.size() - 1],SMR);
+	cuMatrix M(SMR.W_l.rows(), al[al.size() - 1].cols());
+	smrForward_(M, al[al.size() - 1], ar[ar.size() - 1], SMR);
 	get_res_array(M, output, offset);
 }
-
-
 __global__ void n2aKernel(float* src,float* dst, float bnl,int col){	
 	int x = blockIdx.x;
 	int y = threadIdx.x;

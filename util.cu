@@ -342,7 +342,7 @@ void hiddenGetUgrad(cuMatrix4d& delta_l, cuMatrix4d& delta_r,
 	}
 	assert(tmpSize != acti_sum.sizes());
 	//U_lgrad
-	cuMatrix4d_matMul(delta_l, acti2_sum.t() , tmpRes);
+	cuMatrix4d_matMul(delta_l, acti_sum.t() , tmpRes);
 	gradKernle<<<dim3(tmpRes.rows()), dim3(threadnum)>>>(tmpRes.getDev(), hidden.U_lgrad.getDev(), hidden.U_l.getDev(), 
 			WeightDecay, nSamples, tmpRes.area2D(), tmpRes.ts(), tmpRes.cols());
 	checkCudaErrors(cudaStreamSynchronize(0));
