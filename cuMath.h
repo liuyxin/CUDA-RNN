@@ -13,7 +13,8 @@
 #include "hardware.h"
 #include "cuMatrix.h"
 #include "cuMatrix4d.h"
-
+#include "memory"
+using namespace std;
 cuMatrix ReLU(cuMatrix& cumat);
 cuMatrix dReLU(cuMatrix& cumat);
 cuMatrix reduceMax(cuMatrix& src);

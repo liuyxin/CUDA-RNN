@@ -47,12 +47,14 @@ __global__ void anaKernel(float* a, float* n,float* p, float* bnl,int a2,int col
 void acti2non2acti(cuMatrix4d& acti, cuMatrix4d& non,cuMatrix4d& bnl ,cuMatrix& w,int t,bool f){
 	cuMatrix tmpRes;
 	int tmpSize = w.rows() * acti.cols() * sizeof(float);
-	if (cuMatrix::tmpMemory.find(tmpSize) != cuMatrix::tmpMemory.end()) {
-		tmpRes = cuMatrix(cuMatrix::tmpMemory[tmpSize], w.rows(), acti.cols());
+	tmpMemory mem(tmpSize);
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		tmpRes = cuMatrix(tmpPtr, w.rows(), acti.cols());
 	} else {
 		tmpRes = cuMatrix(w.rows(), acti.cols());
-		cuMatrix::tmpMemory[tmpSize] = tmpRes.data;
-	}
+		mem.set(tmpRes.data);
+	}	
 	float alpha = 1.0;
 	float beta = 0.0;
 	cublasStatus_t stat;
@@ -130,12 +132,14 @@ __global__ void smrKernel(float* p,int a2){
 
 void smrForward(cuMatrix& wr,cuMatrix4d& ar,cuMatrix& wl, cuMatrix4d& al,cuMatrix4d &p){
 	cuMatrix4d tmpp;
-	if (cuMatrix::tmpMemory.find(p.sizes()) != cuMatrix::tmpMemory.end()) {
-		tmpp = cuMatrix4d(cuMatrix::tmpMemory[p.sizes()], p.rows(), p.cols(), p.channals(), p.ts());
+	tmpMemory mem(p.sizes());
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		tmpp = cuMatrix4d(tmpPtr, p.rows(), p.cols(), p.channals(), p.ts());
 	} else {
 		tmpp = cuMatrix4d(p.rows(), p.cols(), p.channals(), p.ts());
-		cuMatrix::tmpMemory[p.sizes()] = tmpp.data;
-	}
+		mem.set(tmpp.data);
+	}	
 	cuMatrix4d_matMul(wl,al,p);
 	cuMatrix4d_matMul(wr,ar,tmpp);
 	cuMatrix4d_Add(p,tmpp,p);
@@ -185,14 +189,15 @@ void smrBP(SoftMax& smr, cuMatrix4d& acti_l, cuMatrix4d& acti_r,
 		cuMatrix4d& dis2, int nSamples) {
 	cuMatrix4d tmpRes;
 	int tmpSize = smr.W_l.sizes() * dis.channals() * dis.ts();
-	if (cuMatrix::tmpMemory.find(tmpSize) != cuMatrix::tmpMemory.end()) {
-		tmpRes = cuMatrix4d(cuMatrix::tmpMemory[tmpSize], smr.W_l.rows(),
-				smr.W_l.cols(), dis.channals(), dis.ts());
+	tmpMemory mem(tmpSize);
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		tmpRes = cuMatrix4d(tmpPtr, smr.W_l.rows(), smr.W_l.cols(), dis.channals(), dis.ts());
 	} else {
-		tmpRes = cuMatrix4d(smr.W_l.rows(), smr.W_l.cols(), dis.channals(),
-				dis.ts());
-		cuMatrix::tmpMemory[tmpSize] = tmpRes.data;
-	}
+		tmpRes = cuMatrix4d(smr.W_l.rows(), smr.W_l.cols(), dis.channals(), dis.ts());
+		mem.set(tmpRes.data);
+	}	
+
 	cuMatrix4d_matMul(dis, acti_l.t(), tmpRes);
 
 	int threadnum =
@@ -249,12 +254,16 @@ void hiddenBPTT(cuMatrix4d& delta, cuMatrix w, cuMatrix4d& non, cuMatrix4d& bnl,
 	cuMatrix tmpRes;
 	int tmpSize = w.rows() * delta.cols() * sizeof(float);
 	int ts = delta.ts();
-	if (cuMatrix::tmpMemory.find(tmpSize) != cuMatrix::tmpMemory.end()) {
-		tmpRes = cuMatrix(cuMatrix::tmpMemory[tmpSize], w.rows(), delta.cols());
+	tmpMemory mem(tmpSize);
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		tmpRes = cuMatrix(tmpPtr, w.rows(), delta.cols());
 	} else {
 		tmpRes = cuMatrix(w.rows(), delta.cols());
-		cuMatrix::tmpMemory[tmpSize] = tmpRes.data;
-	}
+		mem.set(tmpRes.data);
+	}	
+
+
 	float alpha = 1.0;
 	float beta = 0.0;
 	cublasStatus_t stat;
@@ -334,12 +343,14 @@ void hiddenGetUgrad(cuMatrix4d& delta_l, cuMatrix4d& delta_r,
 	//	float beta = 0.0;
 	int threadnum = MAX_THREADNUM > hidden.U_lgrad.cols() ? hidden.U_lgrad.cols() : MAX_THREADNUM;
 	int tmpSize = hidden.U_lgrad.sizes() * delta_l.ts();
-	if (cuMatrix::tmpMemory.find(tmpSize) != cuMatrix::tmpMemory.end()) {
-		tmpRes = cuMatrix4d(cuMatrix::tmpMemory[tmpSize], hidden.U_lgrad.rows(), hidden.U_lgrad.cols(), delta_l.channals(), delta_l.ts());
+	tmpMemory mem(tmpSize);
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		tmpRes = cuMatrix4d(tmpPtr, hidden.U_lgrad.rows(), hidden.U_lgrad.cols(), delta_l.channals(), delta_l.ts());
 	} else {
 		tmpRes = cuMatrix4d(hidden.U_lgrad.rows(), hidden.U_lgrad.cols(), delta_l.channals(), delta_l.ts());
-		cuMatrix::tmpMemory[tmpSize] = tmpRes.data;
-	}
+		mem.set(tmpRes.data);
+	}	
 	assert(tmpSize != acti_sum.sizes());
 	//U_lgrad
 	cuMatrix4d_matMul(delta_l, acti_sum.t() , tmpRes);
@@ -379,13 +390,14 @@ void hiddenGetWgrad(cuMatrix4d& delta_l, cuMatrix4d& delta_r,
 	int threadnum = MAX_THREADNUM > hidden.U_lgrad.cols() ? hidden.U_lgrad.cols() : MAX_THREADNUM;
 	int nSamples = acti_l.cols();
 	int tmpSize = hidden.W_lgrad.sizes() * (delta_l.ts() - 1);
-	if (cuMatrix::tmpMemory.find(tmpSize) != cuMatrix::tmpMemory.end()) {
-		tmpRes = cuMatrix4d(cuMatrix::tmpMemory[tmpSize], hidden.W_lgrad.rows(), hidden.W_lgrad.cols(), delta_l.channals(), delta_l.ts() - 1);
+	tmpMemory mem(tmpSize);
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		tmpRes = cuMatrix4d(tmpPtr, hidden.W_lgrad.rows(), hidden.W_lgrad.cols(), delta_l.channals(), delta_l.ts() - 1);
 	} else {
 		tmpRes = cuMatrix4d(hidden.W_lgrad.rows(), hidden.W_lgrad.cols(), delta_l.channals(), delta_l.ts() - 1);
-		cuMatrix::tmpMemory[tmpSize] = tmpRes.data;
-	}
-	assert(tmpSize != acti_l.sizes());
+		mem.set(tmpRes.data);
+	}	
 	// W_lgrad
 	cuMatrix4d acti_t = acti_l.t();
 	for(int i = 1 ; i < delta_l.ts() ; i ++){

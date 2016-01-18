@@ -6,6 +6,8 @@
 #include <assert.h>
 #include <stdio.h>
 #include <algorithm>
+#include <memory>
+#include <unordered_map>
 //#include "Config.h"
 using namespace std;
 class MatData {
@@ -58,4 +60,36 @@ private:
 	void CpuMalloc();
 };
 
+class tmpMemory{
+	public:
+	static unordered_map<unsigned int, shared_ptr<MatData>> M;
+	tmpMemory(unsigned int n){
+		idx = getUsableIndex(n);
+	}
+	shared_ptr<MatData> getMem(){
+		if(M[idx] == NULL){
+			return NULL; 
+		}
+		return M[idx];
+	}
+	void set(shared_ptr<MatData> data){
+		M[idx] = data;		
+	}
+
+	private:
+	unsigned int getUsableIndex(unsigned int n){
+		unsigned int t = n;
+		if(M[t] == NULL || M[t].use_count() == 1){
+			return t;
+		}
+		while(t++, t < n + sizeof(float)){
+			if(M[t] == NULL || M[t].use_count() == 1){
+				return t;
+			}
+		}
+		printf("no available Memory for size %u\n",n);
+		exit(0);
+	}
+	unsigned int idx;
+};
 #endif

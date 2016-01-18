@@ -11,7 +11,6 @@
 #include "helper_cuda.h"
 #include "MemoryMonitor.h"
 #include "hardware.h"
-//#include "cuMath.h";
 using namespace std;
 class cuMatrix {
 public:
@@ -35,11 +34,7 @@ public:
 		col = c;
 		data = tmpd;
 	}
-//	static map<int, shared_ptr<MatData> >& tmpMemory(){
-//		static map<int,shared_ptr<MatData> > TmpMemory;
-//		return TmpMemory;
-//	}
-	static std::map<unsigned int, shared_ptr<MatData>> tmpMemory;
+//	static std::map<unsigned int, tmpMem> tmpMemory;
 	shared_ptr<MatData> data;
 	int rows() {
 		return row;

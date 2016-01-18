@@ -72,9 +72,7 @@ void trainNetwork(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR,
 	printf("************************************** Training NetWork **************************************\n");
 	time_t trainBegin, trainEnd;
 	trainBegin = time(NULL);
-//	for (int epo = 1; epo <= Config::instance()->get_training_epochs(); epo++) {
-
-	for (int epo = 1; epo <= 10; epo++) {
+	for (int epo = 1; epo <= Config::instance()->get_training_epochs(); epo++) {
 		for (; k <= Config::instance()->get_iter_per_epo() * epo; k++) {
 			if ((k+1) % 200 ==0){
 				updateBNL = true;

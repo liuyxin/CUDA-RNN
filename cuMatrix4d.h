@@ -7,20 +7,14 @@
 #include <string.h>
 #include <vector>
 #include <memory>
-#include <map>
+#include <unordered_map>
 #include "helper_cuda.h"
 #include "MemoryMonitor.h"
-#include "hardware.h"
+//#include "hardware.h"
 #include "cuMatrix.h"
-//#include "cuMath.h"
-
-#define CUMATRIX4D_RIGHT_ONEOF 0
-#define CUMATRIX4D_LEFT_ONEOF  1
-#define CUMATRIX4D_RIGHT_ALL   2
-#define CUMATRIX4D_LEFT_ALL    3
+using namespace std;
 class cuMatrix4d {
 	public:
-		static std::map<int, std::shared_ptr<MatData>> tmpMemory;
 		std::shared_ptr<MatData> data;
 		cuMatrix4d(int r = 0 ,int c = 0 ,int ch = 0 ,int t = 0){
 			row = r;

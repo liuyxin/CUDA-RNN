@@ -47,3 +47,6 @@ void MatData::setGpu(float* src) {
 		exit(0);
 	}
 }
+
+std::unordered_map<unsigned int, shared_ptr<MatData>> tmpMemory::M;
+

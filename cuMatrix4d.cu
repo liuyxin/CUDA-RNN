@@ -60,16 +60,18 @@ __global__ void getSumKernel(float* src, float* c, int col){
 
 float& cuMatrix4d::getSum(){
 	int tmpSize = rows() * channals() * ts() * sizeof(float); 	
-	if (cuMatrix::tmpMemory.find(tmpSize) == cuMatrix::tmpMemory.end()) {
-		cuMatrix::tmpMemory[tmpSize] = make_shared < MatData >(1,rows() * channals() * ts());
+	tmpMemory tmpm(tmpSize);
+	shared_ptr<MatData> mem = tmpm.getMem();
+	if(mem == NULL){
+		mem = make_shared < MatData >(1,rows() * channals() * ts());
+		tmpm.set(mem);
 	}
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
 	int smlen = threadnum;
-	getSumKernel<<<dim3(rows()*channals()*ts()),dim3(threadnum), smlen * sizeof(float)>>>(getDev(),cuMatrix::tmpMemory[tmpSize]->getDev(),cols());
+	getSumKernel<<<dim3(rows()*channals()*ts()),dim3(threadnum), smlen * sizeof(float)>>>(getDev(),mem->getDev(),cols());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("cuMatrix4d::getSum()");
-	cudaMemcpyAsync(&sum,cuMatrix::tmpMemory[tmpSize]->getDev(),sizeof(float),cudaMemcpyDeviceToHost);
-//	cudaMemcpy(&sum,cuMatrix::tmpMemory[tmpSize]->getDev(),sizeof(float),cudaMemcpyDeviceToHost);
+	cudaMemcpyAsync(&sum,mem->getDev(),sizeof(float),cudaMemcpyDeviceToHost);
 	return sum;
 }
 
@@ -87,12 +89,15 @@ cuMatrix4d cuMatrix4d::Mul(cuMatrix4d m) {
 	assert(m.sizes() == sizes());
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
 	cuMatrix4d res;
-	if (cuMatrix::tmpMemory.find(sizes()) != cuMatrix::tmpMemory.end()) {
-		res = cuMatrix4d(cuMatrix::tmpMemory[sizes()], rows(), cols(), channals(), ts());
+	tmpMemory mem(size);
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		res = cuMatrix4d(tmpPtr, rows(), cols(), channals(), ts());
 	} else {
 		res = cuMatrix4d(rows(), cols(), channals(), ts());
-		cuMatrix::tmpMemory[sizes()] = res.data;
-	}
+		mem.set(res.data);
+	}	
+
 	mulKernel<<<dim3(rows(),ts()*channals()), dim3(threadnum)>>>(data->getDev(),
 			m.data->getDev(), res.data->getDev(),m.area2D() ,cols());
 	checkCudaErrors(cudaStreamSynchronize(0));
@@ -112,12 +117,14 @@ __global__ void t_kernel(float* dev_src, float* dev_res, int res_r, int res_c, i
 cuMatrix4d cuMatrix4d::t() {
 	assert(cols() != 0 && rows() != 0);
 	cuMatrix4d res;
-	if (cuMatrix::tmpMemory.find(sizes()) != cuMatrix::tmpMemory.end()) {
-		res = cuMatrix4d(cuMatrix::tmpMemory[sizes()], cols(), rows(),channals(),ts());
+	tmpMemory mem(size);
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		res = cuMatrix4d(tmpPtr, cols(), rows(), channals(), ts());
 	} else {
-		res = cuMatrix4d(cols(), rows(), channals(),ts());
-		cuMatrix::tmpMemory[sizes()] = res.data;
-	}
+		res = cuMatrix4d(cols(), rows(), channals(), ts());
+		mem.set(res.data);
+	}	
 	int threadnum = MAX_THREADNUM > res.cols() ? res.cols() : MAX_THREADNUM;
 	t_kernel<<<dim3(res.rows(),res.channals()*res.ts()), dim3(threadnum)>>>(data->getDev(),
 			res.data->getDev(), res.rows(), res.cols(), area2D());

@@ -19,12 +19,14 @@ cuMatrix ReLU(cuMatrix& cumat) {
 	//	cuMatrix res(cumat.rows(), cumat.cols());
 	cuMatrix res;
 	int size = cumat.sizes();
-	if (cuMatrix::tmpMemory.find(size) != cuMatrix::tmpMemory.end()) {
-		res = cuMatrix(cuMatrix::tmpMemory[size], cumat.rows(), cumat.cols());
+	tmpMemory mem(size);
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		res = cuMatrix(tmpPtr, cumat.rows(), cumat.cols());
 	} else {
 		res = cuMatrix(cumat.rows(), cumat.cols());
-		cuMatrix::tmpMemory[size] = cumat.data;
-	}
+		mem.set(res.data);
+	}	
 	int threadnum = MAX_THREADNUM > cumat.cols() ? cumat.cols() : MAX_THREADNUM;
 	ReLU_kernel<<<dim3(cumat.rows()), dim3(threadnum)>>>(cumat.getDev(),
 			res.getDev(), cumat.rows(), cumat.cols());
@@ -33,7 +35,7 @@ cuMatrix ReLU(cuMatrix& cumat) {
 	return res;
 }
 
-__global__ void dReLU_kernel(float* src, float* dst, int cols, int maxt) {
+__global__ void dReLU_kernel(float* src, float* dst, int cols) {
 	int x = blockIdx.x;
 	int y = threadIdx.x;
 	while (y < cols) {
@@ -42,7 +44,7 @@ __global__ void dReLU_kernel(float* src, float* dst, int cols, int maxt) {
 		} else {
 			dst[x * cols + y] = 1;
 		}
-		y += maxt;
+		y += blockDim.x;
 	}
 }
 
@@ -50,15 +52,17 @@ cuMatrix dReLU(cuMatrix& cumat) {
 	cuMatrix res;
 	int size = cumat.sizes();
 
-	if (cuMatrix::tmpMemory.find(size) != cuMatrix::tmpMemory.end()) {
-		res = cuMatrix(cuMatrix::tmpMemory[size], cumat.rows(), cumat.cols());
+	tmpMemory mem(size);
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		res = cuMatrix(tmpPtr, cumat.rows(), cumat.cols());
 	} else {
 		res = cuMatrix(cumat.rows(), cumat.cols());
-		cuMatrix::tmpMemory[size] = cumat.data;
-	}
+		mem.set(res.data);
+	}	
+
 	int threadnum = MAX_THREADNUM > cumat.cols() ? cumat.cols() : MAX_THREADNUM;
-	dReLU_kernel<<<dim3(cumat.rows()), dim3(threadnum)>>>(cumat.getDev(),
-			res.getDev(), cumat.cols(), threadnum);
+	dReLU_kernel<<<dim3(cumat.rows()), dim3(threadnum)>>>(cumat.getDev(), res.getDev(), cumat.cols());
 	getLastCudaError("dReLU ");
 	return res;
 }
@@ -81,12 +85,14 @@ __global__ void reduce_max_kernel(float* dev_x, float* dev_y, int rows,
 cuMatrix reduceMax(cuMatrix& src) {
 	cuMatrix res;
 	int size = src.sizes();
-	if (cuMatrix::tmpMemory.find(size) != cuMatrix::tmpMemory.end()) {
-		res = cuMatrix(cuMatrix::tmpMemory[size], src.rows(), src.cols());
+	tmpMemory mem(size);
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		res = cuMatrix(tmpPtr, src.rows(), src.cols());
 	} else {
 		res = cuMatrix(src.rows(), src.cols());
-		cuMatrix::tmpMemory[size] = res.data;
-	}
+		mem.set(res.data);
+	}	
 	int threadnum = MAX_THREADNUM > src.cols() ? src.cols() : MAX_THREADNUM;
 	reduce_max_kernel<<<dim3(1), dim3(threadnum)>>>(src.getDev(), res.getDev(),
 			src.rows(), src.cols(), MAX_THREADNUM);
@@ -112,12 +118,6 @@ __global__ void reduce_sum_kernel(float* dev_x, float* dev_y, int rows,
 cuMatrix reduceSum(cuMatrix& src) {
 	cuMatrix res;
 	int size = src.sizes();
-	if (cuMatrix::tmpMemory.find(size) != cuMatrix::tmpMemory.end()) {
-		res = cuMatrix(cuMatrix::tmpMemory[size], src.rows(), src.cols());
-	} else {
-		res = cuMatrix(src.rows(), src.cols());
-		cuMatrix::tmpMemory[size] = res.data;
-	}
 	int threadnum = MAX_THREADNUM > src.cols() ? src.cols() : MAX_THREADNUM;
 	reduce_sum_kernel<<<dim3(src.rows()), dim3(threadnum)>>>(src.getDev(),
 			res.getDev(), src.rows(), src.cols());
@@ -138,12 +138,14 @@ __global__ void log_kernel(float* dev_x, float* dev_y, int cols) {
 cuMatrix Log(cuMatrix& src) {
 	cuMatrix res;
 	int size = src.sizes();
-	if (cuMatrix::tmpMemory.find(size) != cuMatrix::tmpMemory.end()) {
-		res = cuMatrix(cuMatrix::tmpMemory[size], src.rows(), src.cols());
+	tmpMemory mem(size);
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		res = cuMatrix(tmpPtr, src.rows(), src.cols());
 	} else {
 		res = cuMatrix(src.rows(), src.cols());
-		cuMatrix::tmpMemory[size] = res.data;
-	}
+		mem.set(res.data);
+	}	
 	int threadnum = MAX_THREADNUM > src.cols() ? src.cols() : MAX_THREADNUM;
 	log_kernel<<<dim3(src.rows()), dim3(threadnum)>>>(src.getDev(),
 			res.getDev(), src.cols());
@@ -155,12 +157,14 @@ cuMatrix Log(cuMatrix& src) {
 cuMatrix4d Log(cuMatrix4d& src) {
 	cuMatrix4d res;
 	int size = src.sizes();
-	if (cuMatrix::tmpMemory.find(size) != cuMatrix::tmpMemory.end()) {
-		res = cuMatrix4d(cuMatrix::tmpMemory[size], src.rows(), src.cols(),src.channals(),src.ts());
+	tmpMemory mem(size);
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		res = cuMatrix4d(tmpPtr, src.rows(), src.cols(), src.channals(), src.ts());
 	} else {
-		res = cuMatrix4d(src.rows(), src.cols(),src.channals(),src.ts());
-		cuMatrix::tmpMemory[size] = res.data;
-	}
+		res = cuMatrix4d(src.rows(), src.cols(), src.channals(), src.ts());
+		mem.set(res.data);
+	}	
 	int threadnum = MAX_THREADNUM > src.cols() ? src.cols() : MAX_THREADNUM;
 	log_kernel<<<dim3(src.rows()*src.channals()*src.ts()), dim3(threadnum)>>>(src.getDev(),
 			res.getDev(), src.cols());
@@ -181,12 +185,14 @@ cuMatrix Exp(cuMatrix& src) {
 	//	cuMatrix res(src.rows(), src.cols());
 	cuMatrix res;
 	int size = src.sizes();
-	if (cuMatrix::tmpMemory.find(size) != cuMatrix::tmpMemory.end()) {
-		res = cuMatrix(cuMatrix::tmpMemory[size], src.rows(), src.cols());
+	tmpMemory mem(size);
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		res = cuMatrix(tmpPtr, src.rows(), src.cols());
 	} else {
 		res = cuMatrix(src.rows(), src.cols());
-		cuMatrix::tmpMemory[size] = res.data;
-	}
+		mem.set(res.data);
+	}	
 	int threadnum = MAX_THREADNUM > src.cols() ? src.cols() : MAX_THREADNUM;
 	exp_kernel<<<dim3(src.rows()), dim3(threadnum)>>>(src.getDev(),
 			res.getDev(), src.cols());
@@ -233,12 +239,14 @@ cuMatrix Pow(cuMatrix x, cuMatrix y) {
 	}
 	int size = x.sizes();
 	cuMatrix res;
-	if (cuMatrix::tmpMemory.find(size) != cuMatrix::tmpMemory.end()) {
-		res = cuMatrix(cuMatrix::tmpMemory[size], x.rows(), x.cols());
+	tmpMemory mem(size);
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		res = cuMatrix(tmpPtr, x.rows(), x.cols());
 	} else {
 		res = cuMatrix(x.rows(), x.cols());
-		cuMatrix::tmpMemory[size] = res.data;
-	}
+		mem.set(res.data);
+	}	
 	int threadnum = MAX_THREADNUM > x.cols() ? x.cols() : MAX_THREADNUM;
 	Pow_kernel<<<dim3(x.rows()), dim3(threadnum)>>>(x.getDev(), y.getDev(),
 			res.getDev(), x.cols());
@@ -250,12 +258,14 @@ cuMatrix Pow(cuMatrix x, cuMatrix y) {
 cuMatrix Pow(cuMatrix x, float y) {
 	int size = x.sizes();
 	cuMatrix res;
-	if (cuMatrix::tmpMemory.find(size) != cuMatrix::tmpMemory.end()) {
-		res = cuMatrix(cuMatrix::tmpMemory[size], x.rows(), x.cols());
+	tmpMemory mem(size);
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		res = cuMatrix(tmpPtr, x.rows(), x.cols());
 	} else {
 		res = cuMatrix(x.rows(), x.cols());
-		cuMatrix::tmpMemory[size] = res.data;
-	}
+		mem.set(res.data);
+	}	
 	int threadnum = MAX_THREADNUM > x.cols() ? x.cols() : MAX_THREADNUM;
 	Pow_kernel<<<dim3(x.rows()), dim3(threadnum)>>>(x.getDev(), y, res.getDev(),
 			x.cols());
@@ -480,24 +490,24 @@ void cuMatrix4d_matMul(cuMatrix4d& src1,cuMatrix4d src2, cuMatrix4d& dst)
 		getLastCudaError("cuMatrix4d_matMul");
 	}
 	else{
-		cuMatrix tmpRes;	
-		if (cuMatrix::tmpMemory.find(size) != cuMatrix::tmpMemory.end()) {
-			tmpRes = cuMatrix(cuMatrix::tmpMemory[size], dst.channals() * dst.ts() * dst.rows(),dst.channals() * dst.ts() * dst.cols());
-		} else{ 
-			tmpRes = cuMatrix(dst.channals() * dst.ts() * dst.rows(),dst.channals() * dst.ts() * dst.cols());
-			cuMatrix::tmpMemory[size] = tmpRes.data;
-		}
+		cuMatrix tmpRes;
+		tmpMemory mem(size);
+		shared_ptr<MatData> tmpPtr = mem.getMem();
+		if (tmpPtr != NULL) {
+			tmpRes = cuMatrix(tmpPtr, dst.channals() * dst.ts() * dst.rows(), dst.channals() * dst.ts() * dst.cols() );
+		} else {
+			tmpRes = cuMatrix(dst.channals() * dst.ts() * dst.rows(), dst.channals() * dst.ts() * dst.cols());
+			mem.set(tmpRes.data);
+		}	
 		cuMatrix tmpSrc2;	
-		unsigned int size2 = src2.sizes() + 1;
-		if(size == size2){
-			size2 += 1;  // bytes
-		}
-		if (cuMatrix::tmpMemory.find(size2) != cuMatrix::tmpMemory.end()) {
-			tmpSrc2 = cuMatrix(cuMatrix::tmpMemory[size2], src2.rows(),src2.channals() * src2.ts() * src2.cols());
-		} else{ 
+		tmpMemory mem2(size);
+		shared_ptr<MatData> tmpPtr2 = mem2.getMem();
+		if (tmpPtr2 != NULL) {
+			tmpSrc2 = cuMatrix(tmpPtr2,src2.rows(),src2.channals() * src2.ts() * src2.cols());
+		} else {
 			tmpSrc2 = cuMatrix(src2.rows(),src2.channals() * src2.ts() * src2.cols());
-			cuMatrix::tmpMemory[size2] = tmpSrc2.data;
-		}
+			mem2.set(tmpSrc2.data);
+		}	
 		cuMatrix4dRightTrans(src2,tmpSrc2);
 
 		cublasStatus_t stat;
@@ -563,24 +573,25 @@ void cuMatrix4d_matMul(cuMatrix src1, cuMatrix4d& src2, cuMatrix4d& dst){
 		}
 		getLastCudaError("cuMatrix4d_matMul(cuMatrix& src1, cuMatrix4d& src2, cuMatrix4d& dst)");
 	}else{
-		cuMatrix tmpRes;	
-		if (cuMatrix::tmpMemory.find(size) != cuMatrix::tmpMemory.end()) {
-			tmpRes = cuMatrix(cuMatrix::tmpMemory[size], dst.rows(),dst.channals() * dst.ts() * dst.cols());
-		} else{ 
-			tmpRes = cuMatrix(dst.rows(),dst.channals() * dst.ts() * dst.cols());
-			cuMatrix::tmpMemory[size] = tmpRes.data;
-		}
+	
+		cuMatrix tmpRes;
+		tmpMemory mem(size);
+		shared_ptr<MatData> tmpPtr = mem.getMem();
+		if (tmpPtr != NULL) {
+			tmpRes = cuMatrix(tmpPtr,  dst.rows(),dst.channals() * dst.ts() * dst.cols() );
+		} else {
+			tmpRes = cuMatrix( dst.rows(),dst.channals() * dst.ts() * dst.cols());
+			mem.set(tmpRes.data);
+		}	
 		cuMatrix tmpSrc2;	
-		unsigned int size2 = src2.sizes();
-		if(size == size2){
-			size2 += 1;  // bytes
-		}
-		if (cuMatrix::tmpMemory.find(size2) != cuMatrix::tmpMemory.end()) {
-			tmpSrc2 = cuMatrix(cuMatrix::tmpMemory[size2], src2.rows(),src2.channals() * src2.ts() * src2.cols());
-		} else{ 
+		tmpMemory mem2(src2.sizes());
+		shared_ptr<MatData> tmpPtr2 = mem2.getMem();
+		if (tmpPtr2 != NULL) {
+			tmpSrc2 = cuMatrix(tmpPtr2,src2.rows(),src2.channals() * src2.ts() * src2.cols());
+		} else {
 			tmpSrc2 = cuMatrix(src2.rows(),src2.channals() * src2.ts() * src2.cols());
-			cuMatrix::tmpMemory[size2] = tmpSrc2.data;
-		}
+			mem2.set(tmpSrc2.data);
+		}	
 		cuMatrix4dRightTrans(src2,tmpSrc2);
 
 		cublasStatus_t stat;

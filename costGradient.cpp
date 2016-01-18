@@ -88,10 +88,11 @@ void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
 		cuMatrix4d_matMul(Hiddenlayers[i-1].U_r, acti_sum[i-1],nonlin_r[i-1]);	
 		hiddenForward(nonlin_r[i-1],acti_r[i],Hiddenlayers[i-1].W_r,bernoulli_r[i-1],TIMEBACKWARD);
 		square(acti_r[i],acti_r2[i]);
-	
+		//time backwoard
 		cuMatrix4d_Add(acti_r[i], acti_l[i], acti_sum[i]);
 		cuMatrix4d_Add(acti_r2[i], acti_l2[i], acti2_sum[i]);
 	}
+
 	// softmax layer forward
         smrForward(SMR.W_r,acti_r[acti_r.size() - 1], SMR.W_l,acti_l[acti_l.size() - 1], p);
 	set_groundtruth(groundTruth, sampleY);

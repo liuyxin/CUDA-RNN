@@ -69,37 +69,7 @@ int main() {
 		<<Config::instance()->testXNum()<<endl;
 	init_HLandSMR(Config::instance()->HiddenConfigs, Hiddenlayers, SMR,
 			re_word.size());
-	for (int i = 0; i < Hiddenlayers.size(); i++) {
-	printf("Hiddenlayers[i].U_l.sum = %f\n",Hiddenlayers[i].U_l.getSum());
-	printf("Hiddenlayers[i].U_r.sum = %f\n",Hiddenlayers[i].U_r.getSum());
-	}
-
 	Data2GPU(trainX, trainY, testX, testY);
 	trainNetwork(Hiddenlayers,SMR,re_word.size());
 	return 0;
 }
-//int main(){
-//	cuMatrix4d mat(3,2,2,3);
-//	cuMatrix4d mat2(2,3,2,3);
-//	init32(mat);
-//	init23(mat2);
-//	mat.printMat();
-//	printf("\n");
-//	mat2.printMat();
-//	cuMatrix4d res(2,2,2,3);
-//	printf("\n\n");
-//	cuMatrix4d_matMul(mat2,mat,res);
-//	res.printMat();
-//	cuMatrix mat23;
-//	init23(mat23);
-//	cuMatrix4d mat(3,2,2,3);
-//	init32(mat);
-//	mat23.printMat();
-//	printf("\n\n");
-//	mat.printMat();	
-//	cuMatrix4d res(2,2,2,3);
-//	cuMatrix4d_matMul(mat23,mat,res);
-//	printf("\n\n");
-//	res.printMat();
-//	return 0;
-//}

@@ -159,12 +159,14 @@ __global__ void anaKernel(float* a, float* n,float* p, float bnl,int a2,int col)
 void acti2non2acti_(cuMatrix4d& acti, cuMatrix4d& non,float bnl ,cuMatrix& w,int t,bool f){
 	cuMatrix tmpRes;
 	int tmpSize = w.rows() * acti.cols() * sizeof(float);
-	if (cuMatrix::tmpMemory.find(tmpSize) != cuMatrix::tmpMemory.end()) {
-		tmpRes = cuMatrix(cuMatrix::tmpMemory[tmpSize], w.rows(), acti.cols());
+	tmpMemory mem(tmpSize);
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		tmpRes = cuMatrix(tmpPtr, w.rows(), acti.cols());
 	} else {
 		tmpRes = cuMatrix(w.rows(), acti.cols());
-		cuMatrix::tmpMemory[tmpSize] = tmpRes.data;
-	}
+		mem.set(tmpRes.data);
+	}	
 	float alpha = 1.0;
 	float beta = 0.0;
 	cublasStatus_t stat;
@@ -220,12 +222,14 @@ void smrForward_(cuMatrix& M, cuMatrix4d& acti_l, cuMatrix4d& acti_r, SoftMax& S
 	}
 	cuMatrix tmpRes;
 	int size = M.sizes();
-	if (cuMatrix::tmpMemory.find(size) != cuMatrix::tmpMemory.end()) {
-		tmpRes = cuMatrix(cuMatrix::tmpMemory[size], M.rows(), M.cols());
+	tmpMemory mem(size);
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		tmpRes = cuMatrix(tmpPtr, M.rows(), M.cols());
 	} else {
 		tmpRes = cuMatrix(M.rows(), M.cols());
-		cuMatrix::tmpMemory[size] = tmpRes.data;
-	}
+		mem.set(tmpRes.data);
+	}	
 	stat = cublasSgemm(getHandle(), CUBLAS_OP_N, CUBLAS_OP_N, acti_r.cols(),
 			SMR.W_r.rows(), acti_r.rows(), &alpha, acti_r.getDev() + off, acti_r.cols(),
 			SMR.W_r.getDev(), SMR.W_r.cols(), &beta, tmpRes.getDev(), tmpRes.cols());

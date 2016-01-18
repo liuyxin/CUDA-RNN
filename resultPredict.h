@@ -9,6 +9,7 @@
 #include "cuMath.h"
 #include "InputInit.h"
 #include "util.h"
+#include "memory"
 static	std::vector<cuMatrix4d > al;
 static	std::vector<cuMatrix4d > ar;
 static	std::vector<cuMatrix4d > as;
