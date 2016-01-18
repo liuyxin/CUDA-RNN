@@ -118,6 +118,15 @@ __global__ void reduce_sum_kernel(float* dev_x, float* dev_y, int rows,
 cuMatrix reduceSum(cuMatrix& src) {
 	cuMatrix res;
 	int size = src.sizes();
+	tmpMemory mem(size);
+	shared_ptr<MatData> tmpPtr = mem.getMem();
+	if (tmpPtr != NULL) {
+		res = cuMatrix(tmpPtr, src.rows(), src.cols());
+	} else {
+		res = cuMatrix(src.rows(), src.cols());
+		mem.set(res.data);
+	}	
+	
 	int threadnum = MAX_THREADNUM > src.cols() ? src.cols() : MAX_THREADNUM;
 	reduce_sum_kernel<<<dim3(src.rows()), dim3(threadnum)>>>(src.getDev(),
 			res.getDev(), src.rows(), src.cols());
