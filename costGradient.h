@@ -31,5 +31,5 @@ static vector<cuMatrix4d> delta_rd2;
 
 void costParamentInit(vector<HiddenLayer> &Hiddenlayers,SoftMax &SMR);
 void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
-		vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR);
+		vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR, bool updateBnl);
 #endif

@@ -63,7 +63,7 @@ void trainNetwork(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR,
 
 	float mu = 1e-2;
 	int k = 0;
-
+	bool updateBNL = false;
 	cuMatrix4d acti_0(reword_size,Config::instance()->get_batch_size(),1,Config::instance()->get_ngram());
 	cuMatrix sampleY(Config::instance()->get_ngram(),
 			Config::instance()->get_batch_size());
@@ -72,8 +72,16 @@ void trainNetwork(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR,
 	printf("************************************** Training NetWork **************************************\n");
 	time_t trainBegin, trainEnd;
 	trainBegin = time(NULL);
-	for (int epo = 1; epo <= Config::instance()->get_training_epochs(); epo++) {
+//	for (int epo = 1; epo <= Config::instance()->get_training_epochs(); epo++) {
+
+	for (int epo = 1; epo <= 10; epo++) {
 		for (; k <= Config::instance()->get_iter_per_epo() * epo; k++) {
+			if ((k+1) % 200 ==0){
+				updateBNL = true;
+			}
+			else{
+				updateBNL = false;
+			}
 			if (k > 30) {
 				Momentum_w = 0.95;
 				Momentum_u = 0.95;
@@ -81,7 +89,7 @@ void trainNetwork(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR,
 			}
 			cout << "epoch: " << epo << ", iter: " << k << ": ";
 			init_acti0(acti_0, sampleY);
-			getNetworkCost(acti_0, sampleY, Hiddenlayers, SMR);
+			getNetworkCost(acti_0, sampleY, Hiddenlayers, SMR, updateBNL);
 			smrW_ld2.Mul2(Momentum_d2, smrW_ld2);
 			smrW_ld2 += SMR.W_ld2 * (1.0 - Momentum_d2);
 			cuDiv(SMR.lr_W, (smrW_ld2 + mu), smr_lr_W);

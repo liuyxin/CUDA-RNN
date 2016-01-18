@@ -23,8 +23,6 @@ void costParamentInit(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR) {
 	acti_l2[0] = cuMatrix4d(r,c,1,Config::instance()->get_ngram());
 	acti_r2[0] = cuMatrix4d(r,c,1,Config::instance()->get_ngram());
 	acti2_sum[0] = cuMatrix4d(r,c,1,Config::instance()->get_ngram());
-	//	acti_l[0] = cuMatrix4d(r,c,1,Config::instance()->get_ngram());
-	//	acti_r[0] = cuMatrix4d(r,c,1,Config::instance()->get_ngram());
 	for(int i = 1 ; i <= HiddenNum ; i ++){	
 		r = Hiddenlayers[i - 1].U_l.rows();
 		c = i == 1 ?
@@ -65,7 +63,7 @@ void costParamentInit(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR) {
 }
 
 void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
-		vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR) {
+		vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR ,bool updateBnl) {
 	int T = acti_0.ts();
 	int nSamples = acti_0.cols();
 	int HiddenNum = Config::instance()->HiddenConfigs.size();
@@ -78,7 +76,7 @@ void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
 	square(acti_0,acti2_sum[0]);
 	//hiddenlayer forward;
 	for (int i = 1; i <= HiddenNum; i++) {
-		if (Config::instance()->HiddenConfigs[i - 1].get_DropoutRate()< 1.0) {
+		if (updateBnl && Config::instance()->HiddenConfigs[i - 1].get_DropoutRate()< 1.0) {
 			creatBnl(bernoulli_l[i-1],Config::instance()->HiddenConfigs[i - 1].get_DropoutRate());
 			creatBnl(bernoulli_r[i-1],Config::instance()->HiddenConfigs[i - 1].get_DropoutRate());
 		}

@@ -379,16 +379,15 @@ curandGenerator_t getGen() {
 	return gen;
 }
 
-__global__ void creatBnl_kernel(float* dev, float threshold, int a2,int cols) {
+__global__ void creatBnl_kernel(float* dev, float threshold,int cols) {
 
 	int x = blockIdx.x;
 	int y = threadIdx.x;
-	int z = blockIdx.y;
 	while (y < cols) {
-		if (dev[z*a2 + x * cols + y] <= threshold) {
-			dev[z*a2 + x * cols + y] = 1.0f;
+		if (dev[x * cols + y] < threshold) {
+			dev[x * cols + y] = 1.0f;
 		} else {
-			dev[z*a2 + x * cols + y] = 0.0f;
+			dev[x * cols + y] = 0.0f;
 		}
 		y += blockDim.x;
 	}
@@ -398,27 +397,14 @@ void creatBnl(cuMatrix4d& bnl, float threshold) {
 	srand((unsigned) time(NULL));
 	long seed = rand();
 	curandSetPseudoRandomGeneratorSeed(gen, seed);
-	curandGenerateUniform(gen, bnl.getDev(), bnl.rows() * bnl.cols());
+	curandGenerateUniform(gen, bnl.getDev(), bnl.rows() * bnl.cols() * bnl.channals() * bnl.ts());
 	int threadnum = MAX_THREADNUM > bnl.cols() ? bnl.cols() : MAX_THREADNUM;
-	creatBnl_kernel<<<dim3(bnl.rows(),bnl.ts()*bnl.channals()), dim3(threadnum)>>>(bnl.getDev(),
-			threshold, bnl.area2D(),bnl.cols());
+	creatBnl_kernel<<<dim3(bnl.rows() * bnl.ts() * bnl.channals()),dim3(threadnum)>>>(bnl.getDev(),
+			threshold, bnl.cols());
 	checkCudaErrors(cudaStreamSynchronize(0));
 	getLastCudaError("creatBnl(cuMatrix& bnl, float threshold)");
 }
 
-//cublasHandle_t& getHandle() {
-//	static cublasHandle_t handle = NULL;
-//	if (handle == NULL) {
-//		cublasStatus_t stat;
-//		stat = cublasCreate(&handle);
-//		if (stat != CUBLAS_STATUS_SUCCESS) {
-//			printf("init: CUBLAS initialization failed\n");
-//			exit(0);
-//		}
-//	}
-//	return handle;
-//}
-//
 __global__ void addKernel4(float* src1,float* src2, float* dst,int col){
 	int tid = threadIdx.x;
 	int bidx = blockIdx.x;
