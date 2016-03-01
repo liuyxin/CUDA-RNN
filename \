@@ -28,7 +28,7 @@ void costParamentInit(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR) {
 	for (int i = 1; i <= HiddenNum; i++) {
 		for (int j = 0; j < T; j++) {
 			r = Hiddenlayers[i - 1].U_l.rows();
-			c = i == 1 ?
+			c = 1 == i ?
 					Config::instance()->get_batch_size() :
 					acti_l[i - 1][0].cols();
 			acti_l[i].push_back(cuMatrix(r, c));
@@ -348,7 +348,7 @@ void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
 
 	for (int i = HiddenNum - 1; i >= 0; i--) {
 		// forward part.
-		if (i == 0) {
+		if (0 == i) {
 			cuMultiplication(delta_l[i + 1][0], acti_l[i][0].t(),
 					Hiddenlayers[i].U_lgrad);
 			cuMultiplication(delta_ld2[i + 1][0], acti_l2[i][0].t(),
@@ -395,7 +395,7 @@ void getNetworkCost(cuMatrix4d &acti_0, cuMatrix &sampleY,
 				Config::instance()->HiddenConfigs[i].get_WeightDecay();
 
 // backward part.
-		if (i == 0) {
+		if (0 == i) {
 			cuMultiplication(delta_r[i + 1][0], acti_r[i][0].t(),
 					Hiddenlayers[i].U_rgrad);
 			cuMultiplication(delta_rd2[i + 1][0], acti_r2[i][0].t(),

@@ -7,10 +7,10 @@ static __shared__ bool isLastBlockDone;
 
 cublasHandle_t& getHandle() {
 	static cublasHandle_t handle = NULL;
-	if (handle == NULL) {
+	if (NULL == handle) {
 		cublasStatus_t stat;
 		stat = cublasCreate(&handle);
-		if (stat != CUBLAS_STATUS_SUCCESS) {
+		if (CUBLAS_STATUS_SUCCESS != stat) {
 			printf("init: CUBLAS initialization failed\n");
 			exit(0);
 		}
@@ -52,7 +52,7 @@ cuMatrix cuMatrix::operator +(cuMatrix cumat) {
 	cuMatrix res;
 	tmpMemory mem(size);
 	shared_ptr<MatData> tmpPtr = mem.getMem();
-	if (tmpPtr != NULL) {
+	if (NULL != tmpPtr) {
 		res = cuMatrix(tmpPtr, rows(), cols());
 	} else {
 		res = cuMatrix(rows(), cols());
@@ -67,12 +67,12 @@ cuMatrix cuMatrix::operator +(cuMatrix cumat) {
 }
 
 cuMatrix cuMatrix::operator +(float i) {
-	assert(data->getDev() != NULL);
+	assert(NULL != data->getDev());
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
 	cuMatrix res;
 	tmpMemory mem(size);
 	shared_ptr<MatData> tmpPtr = mem.getMem();
-	if (tmpPtr != NULL) {
+	if (NULL != tmpPtr) {
 		res = cuMatrix(tmpPtr, rows(), cols());
 	} else {
 		res = cuMatrix(rows(), cols());
@@ -100,7 +100,7 @@ void cuMatrix::operator +=(cuMatrix cumat) {
 }
 
 void cuMatrix::operator +=(float i) {
-	assert(data->getDev() != NULL);
+	assert(NULL != data->getDev());
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
 	add_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(), i,
 			data->getDev(), cols(), MAX_THREADNUM);
@@ -129,7 +129,7 @@ __global__ void dec_kernel(float* dev_x, float y_, float* dev_z, int cols,
 
 cuMatrix cuMatrix::operator -(cuMatrix cumat) {
 	if (!size) {
-		if (cumat.data->getDev() == NULL) {
+		if (NULL == cumat.data->getDev()) {
 			printf("cuMatrix error : both matrix are empty.\n");
 			exit(0);
 		}
@@ -143,7 +143,7 @@ cuMatrix cuMatrix::operator -(cuMatrix cumat) {
 	cuMatrix res;
 	tmpMemory mem(size);
 	shared_ptr<MatData> tmpPtr = mem.getMem();
-	if (tmpPtr != NULL) {
+	if (NULL != tmpPtr) {
 		res = cuMatrix(tmpPtr, rows(), cols());
 	} else {
 		res = cuMatrix(rows(), cols());
@@ -157,12 +157,12 @@ cuMatrix cuMatrix::operator -(cuMatrix cumat) {
 }
 
 cuMatrix cuMatrix::operator -(float i) {
-	assert(data->getDev() != NULL);
+	assert(NULL != data->getDev());
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
 	cuMatrix res;
 	tmpMemory mem(size);
 	shared_ptr<MatData> tmpPtr = mem.getMem();
-	if (tmpPtr != NULL) {
+	if (NULL != tmpPtr) {
 		res = cuMatrix(tmpPtr, rows(), cols());
 	} else {
 		res = cuMatrix(rows(), cols());
@@ -189,7 +189,7 @@ void cuMatrix::operator -=(cuMatrix cumat) {
 }
 
 void cuMatrix::operator -=(float i) {
-	assert(data->getDev() != NULL);
+	assert(NULL != data->getDev());
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
 	dec_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(), i,
 			data->getDev(), cols(), MAX_THREADNUM);
@@ -216,12 +216,12 @@ __global__ void mul_kernel(float* dev_x, float y_, float* dev_z, int cols) {
 
 cuMatrix cuMatrix::Mul(cuMatrix cumat) {
 	assert(cumat.sizes() == sizes());
-	assert(data->getDev() != NULL && cumat.data->getDev() != NULL);
+	assert(NULL != data->getDev() && NULL != cumat.data->getDev());
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
 	cuMatrix res;
 	tmpMemory mem(size);
 	shared_ptr<MatData> tmpPtr = mem.getMem();
-	if (tmpPtr != NULL) {
+	if (NULL != tmpPtr) {
 		res = cuMatrix(tmpPtr, rows(), cols());
 	} else {
 		res = cuMatrix(rows(), cols());
@@ -254,12 +254,12 @@ void cuMatrix::Mul2(float i ,cuMatrix& res){
 }
 
 cuMatrix cuMatrix::operator *(float i) {
-	assert(data->getDev() != NULL);
+	assert(NULL != data->getDev());
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
 	cuMatrix res;
 	tmpMemory mem(size);
 	shared_ptr<MatData> tmpPtr = mem.getMem();
-	if (tmpPtr != NULL) {
+	if (NULL != tmpPtr) {
 		res = cuMatrix(tmpPtr, rows(), cols());
 	} else {
 		res = cuMatrix(rows(), cols());
@@ -278,7 +278,7 @@ cuMatrix cuMatrix::operator *(cuMatrix cumat) {
 	int tmpSize = rows() * cumat.cols() * sizeof(float);
 	tmpMemory mem(tmpSize);
 	shared_ptr<MatData> tmpPtr = mem.getMem();
-	if (tmpPtr != NULL) {
+	if (NULL != tmpPtr) {
 		res = cuMatrix(tmpPtr, rows(), cumat.cols());
 	} else {
 		res = cuMatrix(rows(), cumat.cols());
@@ -291,7 +291,7 @@ cuMatrix cuMatrix::operator *(cuMatrix cumat) {
 			rows(), cumat.rows(), &alpha, cumat.getDev(), cumat.cols(),
 			getDev(), cols(), &beta, res.getDev(), res.cols());
 	cudaStreamSynchronize(0);
-	if (stat != CUBLAS_STATUS_SUCCESS) {
+	if (CUBLAS_STATUS_SUCCESS != stat) {
 		printf("cuMatrix::Mul() error\n");
 		exit(0);
 	}
@@ -299,7 +299,7 @@ cuMatrix cuMatrix::operator *(cuMatrix cumat) {
 }
 
 void cuMatrix::operator *=(float i) {
-	assert(data->getDev() != NULL);
+	assert(NULL != data->getDev());
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
 	mul_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(), i,
 			data->getDev(), cols());
@@ -338,12 +338,12 @@ __global__ void div_kernel(float* dev_x, float y_, float* dev_z, int cols,
 
 cuMatrix cuMatrix::operator /(cuMatrix cumat) {
 	assert(cumat.rows() == rows() && cumat.cols() == cols());
-	assert(data->getDev() != NULL && cumat.data->getDev() != NULL);
+	assert(NULL != data->getDev() && NULL != cumat.data->getDev());
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
 	cuMatrix res;
 	tmpMemory mem(size);
 	shared_ptr<MatData> tmpPtr = mem.getMem();
-	if (tmpPtr != NULL) {
+	if (NULL != tmpPtr) {
 		res = cuMatrix(tmpPtr, rows(), cols());
 	} else {
 		res = cuMatrix(rows(), cols());
@@ -357,13 +357,13 @@ cuMatrix cuMatrix::operator /(cuMatrix cumat) {
 }
 
 cuMatrix cuMatrix::operator /(float i) {
-	assert(data->getDev() != NULL);
-	assert(i != 0);
+	assert(NULL != data->getDev());
+	assert(0 != i);
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
 	cuMatrix res;
 	tmpMemory mem(size);
 	shared_ptr<MatData> tmpPtr = mem.getMem();
-	if (tmpPtr != NULL) {
+	if (NULL != tmpPtr) {
 		res = cuMatrix(tmpPtr, rows(), cols());
 	} else {
 		res = cuMatrix(rows(), cols());
@@ -378,7 +378,7 @@ cuMatrix cuMatrix::operator /(float i) {
 
 void cuMatrix::operator /=(cuMatrix cumat) {
 	assert(cumat.rows() == rows() && cumat.cols() == cols());
-	assert(data->getDev() != NULL && cumat.data->getDev() != NULL);
+	assert(NULL != data->getDev() && NULL != cumat.data->getDev());
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
 	div_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(),
 			cumat.data->getDev(), data->getDev(), cols(), MAX_THREADNUM);
@@ -387,8 +387,8 @@ void cuMatrix::operator /=(cuMatrix cumat) {
 }
 
 void cuMatrix::operator /=(float i) {
-	assert(data->getDev() != NULL);
-	assert(i != 0);
+	assert(NULL != data->getDev());
+	assert(0 != i);
 	int threadnum = MAX_THREADNUM > cols() ? cols() : MAX_THREADNUM;
 	div_kernel<<<dim3(rows()), dim3(threadnum)>>>(data->getDev(), i,
 			data->getDev(), cols(), MAX_THREADNUM);
@@ -406,11 +406,11 @@ __global__ void t_kernel(float* dev_src, float* dev_res, int res_r, int res_c){
 }
 
 cuMatrix cuMatrix::t() {
-	assert(cols() != 0 && rows() != 0);
+	assert(0 != cols() && 0 != rows());
 	cuMatrix res;
 	tmpMemory mem(size);
 	shared_ptr<MatData> tmpPtr = mem.getMem();
-	if (tmpPtr != NULL) {
+	if (NULL != tmpPtr) {
 		res = cuMatrix(tmpPtr, cols(), rows());
 	} else {
 		res = cuMatrix(cols(), rows());
@@ -442,7 +442,7 @@ cuMatrix operator /(float x, cuMatrix cumat) {
 	cuMatrix res;
 	tmpMemory mem(cumat.sizes());
 	shared_ptr<MatData> tmpPtr = mem.getMem();
-	if (tmpPtr != NULL) {
+	if (NULL != tmpPtr) {
 		res = cuMatrix(tmpPtr, cumat.rows(), cumat.cols());
 	} else {
 		res = cuMatrix(cumat.rows(), cumat.cols());
@@ -512,7 +512,7 @@ __global__ void getSumKernel_(float* src,float* c,int col){
 	}
 	__syncthreads();
 	t = blockDim.x;
-	while(t != 1){
+	while(1 != t){
 		int skip = (t + 1) >> 1;
 		if(y < (t >> 1)){
 			sm[y] += sm[y + skip];		
@@ -520,7 +520,7 @@ __global__ void getSumKernel_(float* src,float* c,int col){
 		t = (t+1)>>1;
 		__syncthreads();
 	}
-	if(y == 0){
+	if(0 == y){
 		c[x] = sm[0];
 		__threadfence();
 		unsigned int value = atomicInc(&__count , gridDim.x);//count > gridDim.x? 0 : count++;
@@ -538,7 +538,7 @@ __global__ void getSumKernel_(float* src,float* c,int col){
 		}
 		__syncthreads();
 		t = blockDim.x;
-		while(t != 1){
+		while(1 != t){
 			int skip = (t + 1) >> 1;
 			if(y < (t >> 1)){
 				sm[y] += sm[y + skip];		
@@ -546,7 +546,7 @@ __global__ void getSumKernel_(float* src,float* c,int col){
 			t = (t+1)>>1;
 			__syncthreads();
 		}
-		if(y == 0){
+		if(0 == y){
 			c[0] = sm[0];
 		}
 		__count = 0;
@@ -558,7 +558,7 @@ float& cuMatrix::getSum(){
 	int tmpSize = rows() * sizeof(float); 	
 	tmpMemory mem(tmpSize);
 	shared_ptr<MatData> tmpPtr = mem.getMem();
-	if (tmpPtr == NULL) {
+	if (NULL == tmpPtr) {
 		tmpPtr = make_shared < MatData >(rows(),1);
 		mem.set(tmpPtr);
 	}	

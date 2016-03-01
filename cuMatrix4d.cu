@@ -16,7 +16,7 @@ __global__ void getSumKernel(float* src, float* c, int col){
 	}
 	__syncthreads();
 	t = blockDim.x;
-	while(t != 1){
+	while(1 != t){
 		int skip = (t + 1) >> 1;
 		if(y < (t >> 1)){
 			sm[y] += sm[y + skip];		
@@ -24,7 +24,7 @@ __global__ void getSumKernel(float* src, float* c, int col){
 		t = (t+1)>>1;
 		__syncthreads();
 	}
-	if(y == 0){
+	if(0 == y){
 		c[x] = sm[0];
 		__threadfence();
 			unsigned int value = atomicInc(&__count , gridDim.x);//count > gridDim.x? 0 : count++;
@@ -42,7 +42,7 @@ __global__ void getSumKernel(float* src, float* c, int col){
 		}
 		__syncthreads();
 		t = blockDim.x;
-		while(t != 1){
+		while(1 != t){
 			int skip = (t + 1) >> 1;
 			if(y < (t >> 1)){
 				sm[y] += sm[y + skip];		
@@ -50,7 +50,7 @@ __global__ void getSumKernel(float* src, float* c, int col){
 			t = (t+1)>>1;
 			__syncthreads();
 		}
-		if(y == 0){
+		if(0 == y){
 			c[0] = sm[0];
 		}
 		__count = 0 ;
@@ -62,7 +62,7 @@ float& cuMatrix4d::getSum(){
 	int tmpSize = rows() * channals() * ts() * sizeof(float); 	
 	tmpMemory tmpm(tmpSize);
 	shared_ptr<MatData> mem = tmpm.getMem();
-	if(mem == NULL){
+	if(NULL == mem){
 		mem = make_shared < MatData >(1,rows() * channals() * ts());
 		tmpm.set(mem);
 	}
@@ -91,7 +91,7 @@ cuMatrix4d cuMatrix4d::Mul(cuMatrix4d m) {
 	cuMatrix4d res;
 	tmpMemory mem(size);
 	shared_ptr<MatData> tmpPtr = mem.getMem();
-	if (tmpPtr != NULL) {
+	if (NULL != tmpPtr) {
 		res = cuMatrix4d(tmpPtr, rows(), cols(), channals(), ts());
 	} else {
 		res = cuMatrix4d(rows(), cols(), channals(), ts());
@@ -115,11 +115,11 @@ __global__ void t_kernel(float* dev_src, float* dev_res, int res_r, int res_c, i
 }
 
 cuMatrix4d cuMatrix4d::t() {
-	assert(cols() != 0 && rows() != 0);
+	assert(0 != cols() && 0 != rows());
 	cuMatrix4d res;
 	tmpMemory mem(size);
 	shared_ptr<MatData> tmpPtr = mem.getMem();
-	if (tmpPtr != NULL) {
+	if ( NULL != tmpPtr) {
 		res = cuMatrix4d(tmpPtr, cols(), rows(), channals(), ts());
 	} else {
 		res = cuMatrix4d(cols(), rows(), channals(), ts());

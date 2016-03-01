@@ -11,7 +11,7 @@ void testInit(vector<HiddenLayer> &Hiddenlayers) {
 	as = std::vector<cuMatrix4d>(HiddenNum + 1);
 	for (int i = 1; i < HiddenNum + 1; i++) {
 		int r = Hiddenlayers[i - 1].U_l.rows();
-		int c = i == 1 ?
+		int c = 1 == i ?
 			Config::instance()->get_batch_size() : al[i - 1].cols();
 		al[i] = cuMatrix4d(r, c, 1, Config::instance()->get_ngram());
 		ar[i] = cuMatrix4d(r, c, 1, Config::instance()->get_ngram());
@@ -42,7 +42,7 @@ void testNetwork(vector<HiddenLayer> &Hiddenlayers, SoftMax &SMR, bool flag) {
 		cuMatrix4d sampleX(wn, batch_size, 1, Config::instance()->get_ngram());
 		for (int i = 1; i < Hiddenlayers.size() + 1; i++) {
 			int r = Hiddenlayers[i - 1].U_l.rows();
-			int c = i == 1 ?
+			int c = 1 == i ?
 				batch_size : al[i - 1].cols();
 			al[i] = cuMatrix4d(r, c, 1, Config::instance()->get_ngram());
 			ar[i] = cuMatrix4d(r, c, 1, Config::instance()->get_ngram());
@@ -170,7 +170,7 @@ void acti2non2acti_(cuMatrix4d& acti, cuMatrix4d& non,float bnl ,cuMatrix& w,int
 	float alpha = 1.0;
 	float beta = 0.0;
 	cublasStatus_t stat;
-	if(f == TIMEFORWARD){
+	if(TIMEFORWARD == f){
 		stat = cublasSgemm(getHandle(), CUBLAS_OP_N, CUBLAS_OP_N, acti.cols(),
 				w.rows(), acti.rows(), &alpha, acti.getDev()+(t-1)*acti.area2D(), acti.cols(),
 				w.getDev(), w.cols(), &beta, tmpRes.getDev(), tmpRes.cols());
@@ -192,7 +192,7 @@ void acti2non2acti_(cuMatrix4d& acti, cuMatrix4d& non,float bnl ,cuMatrix& w,int
 
 
 void hiddenForward_(cuMatrix4d& acti,cuMatrix& weight, float dr, bool f){
-	if(f == TIMEFORWARD){
+	if(TIMEFORWARD == f){
 		non2acti_(acti,acti,dr,0);			
 		for(int t = 1 ; t < acti.ts() ; t++){
 			acti2non2acti_(acti,acti,dr,weight,t,TIMEFORWARD);
@@ -224,7 +224,7 @@ void smrForward_(cuMatrix& M, cuMatrix4d& acti_l, cuMatrix4d& acti_r, SoftMax& S
 	int size = M.sizes();
 	tmpMemory mem(size);
 	shared_ptr<MatData> tmpPtr = mem.getMem();
-	if (tmpPtr != NULL) {
+	if (NULL != tmpPtr) {
 		tmpRes = cuMatrix(tmpPtr, M.rows(), M.cols());
 	} else {
 		tmpRes = cuMatrix(M.rows(), M.cols());
@@ -234,7 +234,7 @@ void smrForward_(cuMatrix& M, cuMatrix4d& acti_l, cuMatrix4d& acti_r, SoftMax& S
 			SMR.W_r.rows(), acti_r.rows(), &alpha, acti_r.getDev() + off, acti_r.cols(),
 			SMR.W_r.getDev(), SMR.W_r.cols(), &beta, tmpRes.getDev(), tmpRes.cols());
 	cudaStreamSynchronize(0);
-	if (stat != CUBLAS_STATUS_SUCCESS) {
+	if (CUBLAS_STATUS_SUCCESS != stat) {
 		printf("predict.h, smrFORward SMR.W_r * acti_r[mid] error\n");
 		exit(0);
 	}

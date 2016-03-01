@@ -16,12 +16,12 @@ void MatData::Malloc__() {
 	}
 }
 void MatData::Malloc() {
-	assert(dev == NULL && host == NULL);
+	assert( NULL == dev && NULL == host );
 	Malloc__();
 }
 
 void MatData::CpuMalloc() {
-	if (host == NULL && size != 0) {
+	if (NULL == host && 0 != size) {
 		host = (float*) malloc(size);
 //		memset(host, 0, rows * cols * sizeof(float));
 		memset(host, 0, size);

@@ -15,7 +15,7 @@ public:
 	MatData(int r = 0, int c = 0) {
 		size = r * c * sizeof(float);
 		host = NULL;
-		if (size == 0) {
+		if (0 == size) {
 			dev = NULL;
 		} else {
 			Malloc__();
@@ -24,27 +24,27 @@ public:
 	MatData(int r , int c ,int ch ,int t) {
 		size = r * c * ch * t * sizeof(float);
 		host = NULL;
-		if (size == 0) {
+		if (0 == size) {
 			dev = NULL;
 		} else {
 			Malloc__();
 		}
 	}
 	~MatData() {
-		if (host != NULL)
+		if (NULL != host)
 			free(host);
-		if (dev != NULL)
+		if (NULL != dev)
 			cudaFree(dev);
 	}
 	void Malloc();
 	void toCpu();
 	void setGpu(float* src);
 	float* getDev() {
-		assert(dev != NULL);
+		assert(NULL != dev);
 		return dev;
 	}
 	float* getHost() {
-		if (host == NULL) {
+		if (NULL == host) {
 			toCpu();
 		}
 		return host;
@@ -67,7 +67,7 @@ class tmpMemory{
 		idx = getUsableIndex(n);
 	}
 	shared_ptr<MatData> getMem(){
-		if(M[idx] == NULL){
+		if( NULL == M[idx] ){
 			return NULL; 
 		}
 		return M[idx];
@@ -79,11 +79,11 @@ class tmpMemory{
 	private:
 	unsigned int getUsableIndex(unsigned int n){
 		unsigned int t = n;
-		if(M[t] == NULL || M[t].use_count() == 1){
+		if(NULL == M[t] || 1 == M[t].use_count() ){
 			return t;
 		}
 		while(t++, t < n + sizeof(float)){
-			if(M[t] == NULL || M[t].use_count() == 1){
+			if(NULL == M[t] || 1 == M[t].use_count()){
 				return t;
 			}
 		}

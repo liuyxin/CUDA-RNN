@@ -392,7 +392,7 @@ void cuDiv(float src1, cuMatrix src2, cuMatrix dst) {
 }
 curandGenerator_t getGen() {
 	static curandGenerator_t gen = NULL;
-	if (gen == NULL) {
+	if (NULL == gen) {
 		curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT);
 	}
 	return gen;
