@@ -6,8 +6,8 @@ __global__ void ReLU_kernel(float* src, float* dst, int rows, int cols) {
 	int y = threadIdx.x;
 	while (y < cols) {
 		assert(x * cols + y < rows * cols);
-		if (src[x * cols + y] <= 0) {
-			dst[x * cols + y] = 0;
+		if (src[x * cols + y] < 0.000001) {
+			dst[x * cols + y] = 0.0f;
 		} else {
 			dst[x * cols + y] = src[x * cols + y];
 		}
@@ -39,10 +39,10 @@ __global__ void dReLU_kernel(float* src, float* dst, int cols) {
 	int x = blockIdx.x;
 	int y = threadIdx.x;
 	while (y < cols) {
-		if (src[x * cols + y] <= 0) {
-			dst[x * cols + y] = 0;
+		if (src[x * cols + y] < 0.000001) {
+			dst[x * cols + y] = 0.0f;
 		} else {
-			dst[x * cols + y] = 1;
+			dst[x * cols + y] = 1.0f;
 		}
 		y += blockDim.x;
 	}
